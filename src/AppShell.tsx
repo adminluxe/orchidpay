@@ -5,13 +5,17 @@ import HomeScreen from './screens/HomeScreen';
 import SendScreen from './screens/SendScreen';
 import ReceiveScreen from './screens/ReceiveScreen';
 import DepositScreen from './screens/DepositScreen';
+import SecurityScreen from './screens/SecurityScreen';
 import { ActivityScreen, CardsScreen, ProfileScreen, ScanScreen } from './screens/TabScreens';
+import { SessionProvider, useSession } from './security/SessionContext';
+import LockScreen from './security/LockScreen';
 import type { AppRoute, Navigate, TabRoute } from './types';
 import { colors } from './theme';
 
 const tabRoutes: TabRoute[] = ['home', 'cards', 'scan', 'activity', 'profile'];
 
-export default function AppShell() {
+function AppRouter() {
+  const session = useSession();
   const [route, setRoute] = useState<AppRoute>('home');
   const [lastTab, setLastTab] = useState<TabRoute>('home');
 
@@ -22,11 +26,16 @@ export default function AppShell() {
     }
   };
 
+  if (session.status === 'locked') {
+    return <LockScreen />;
+  }
+
   const content = (() => {
     switch (route) {
       case 'send': return <SendScreen navigate={navigate} />;
       case 'receive': return <ReceiveScreen navigate={navigate} />;
       case 'deposit': return <DepositScreen navigate={navigate} />;
+      case 'security': return <SecurityScreen navigate={navigate} />;
       case 'cards': return <CardsScreen />;
       case 'scan': return <ScanScreen />;
       case 'activity': return <ActivityScreen />;
@@ -43,6 +52,14 @@ export default function AppShell() {
       <View style={styles.content}>{content}</View>
       {showTabs ? <BottomNav active={lastTab} navigate={navigate} /> : null}
     </View>
+  );
+}
+
+export default function AppShell() {
+  return (
+    <SessionProvider>
+      <AppRouter />
+    </SessionProvider>
   );
 }
 
