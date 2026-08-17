@@ -1,5 +1,5 @@
-import HomeScreen from './src/screens/HomeScreen';
+import AppShell from './src/AppShell';
 
 export default function App() {
-  return <HomeScreen />;
+  return <AppShell />;
 }
