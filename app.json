@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "orchidpay",
-    "slug": "orchidpay",
+    "name": "OrchidPay",
+    "slug": "orchidpay-mobile",
+    "owner": "delishafrica",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,9 +15,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.delishafrica.orchidpaymobile",
+      "buildNumber": "2",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "OrchidPay utilise Face ID pour protéger votre session et confirmer les opérations sensibles."
+      },
+      "runtimeVersion": "1.0.0-r12-ios-native-security-v1"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +28,8 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "com.delishafrica.orchidpaymobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -39,6 +44,30 @@
     },
     "updates": {
       "url": "https://u.expo.dev/31e42526-bb26-42d9-9bcb-6ec23853aee2"
-    }
+    },
+    "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "OrchidPay utilise Face ID pour protéger votre session et confirmer les opérations sensibles."
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "OrchidPay utilise Face ID pour protéger votre session et confirmer les opérations sensibles."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "OrchidPay utilise l’appareil photo uniquement pour scanner des QR à vérifier avant confirmation.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ]
+    ]
   }
 }

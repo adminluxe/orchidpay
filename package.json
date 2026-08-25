@@ -9,10 +9,28 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~55.0.4",
-    "expo-status-bar": "~55.0.4",
+    "expo": "~55.0.29",
+    "expo-camera": "~55.0.22",
+    "expo-crypto": "~55.0.18",
+    "expo-dev-client": "~55.0.38",
+    "expo-local-authentication": "~55.0.17",
+    "expo-notifications": "~55.0.26",
+    "expo-secure-store": "~55.0.17",
+    "expo-status-bar": "~55.0.6",
     "react": "19.2.0",
-    "react-native": "0.83.2"
+    "react-native": "0.83.10",
+    "react-native-safe-area-context": "~5.6.2"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/react": "~19.2.10",
+    "typescript": "~5.9.2"
+  },
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo-notifications"
+      ]
+    }
+  }
 }
