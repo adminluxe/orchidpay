@@ -25,6 +25,48 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      - name: Dependency audit evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --json > /tmp/npm-audit-full.json || true
+          npm audit --omit=dev --json > /tmp/npm-audit-prod.json || true
+          node <<'NODE'
+          const fs = require('fs');
+          function report(label, path) {
+            const j = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const vulns = j.vulnerabilities || {};
+            console.log(`=== ${label} ===`);
+            console.log('metadata=' + JSON.stringify(j.metadata || {}));
+            for (const name of Object.keys(vulns).sort()) {
+              const v = vulns[name];
+              const via = Array.isArray(v.via) ? v.via.map(x => typeof x === 'string' ? {name:x} : {
+                source:x.source,
+                name:x.name,
+                dependency:x.dependency,
+                title:x.title,
+                url:x.url,
+                severity:x.severity,
+                range:x.range,
+                cvss:x.cvss,
+                cwe:x.cwe
+              }) : v.via;
+              console.log(JSON.stringify({
+                name,
+                severity:v.severity,
+                isDirect:v.isDirect,
+                range:v.range,
+                nodes:v.nodes,
+                effects:v.effects,
+                via,
+                fixAvailable:v.fixAvailable
+              }));
+            }
+          }
+          report('NPM_AUDIT_FULL', '/tmp/npm-audit-full.json');
+          report('NPM_AUDIT_OMIT_DEV', '/tmp/npm-audit-prod.json');
+          NODE
+
       - name: Build
         run: npm run build --if-present
 
