@@ -51,21 +51,21 @@ jobs:
                 cvss:x.cvss,
                 cwe:x.cwe
               }) : v.via;
-              console.log(JSON.stringify({
-                name,
-                severity:v.severity,
-                isDirect:v.isDirect,
-                range:v.range,
-                nodes:v.nodes,
-                effects:v.effects,
-                via,
-                fixAvailable:v.fixAvailable
-              }));
+              console.log(JSON.stringify({name,severity:v.severity,isDirect:v.isDirect,range:v.range,nodes:v.nodes,effects:v.effects,via,fixAvailable:v.fixAvailable}));
             }
           }
           report('NPM_AUDIT_FULL', '/tmp/npm-audit-full.json');
           report('NPM_AUDIT_OMIT_DEV', '/tmp/npm-audit-prod.json');
           NODE
+
+      - name: Dependency provenance evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for p in shell-quote @xmldom/xmldom brace-expansion image-size js-yaml picomatch ws yaml uuid @babel/core @expo/metro metro; do
+            echo "=== NPM_EXPLAIN $p ==="
+            npm explain "$p" || true
+          done
 
       - name: Build
         run: npm run build --if-present
