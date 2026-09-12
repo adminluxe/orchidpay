@@ -9,10 +9,48 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~55.0.4",
-    "expo-status-bar": "~55.0.4",
+    "expo": "~55.0.29",
+    "expo-camera": "~55.0.22",
+    "expo-crypto": "~55.0.18",
+    "expo-dev-client": "~55.0.38",
+    "expo-local-authentication": "~55.0.17",
+    "expo-notifications": "~55.0.26",
+    "expo-secure-store": "~55.0.17",
+    "expo-status-bar": "~55.0.6",
     "react": "19.2.0",
-    "react-native": "0.83.2"
+    "react-native": "0.83.10",
+    "react-native-safe-area-context": "~5.6.2"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/react": "~19.2.10",
+    "typescript": "~5.9.2"
+  },
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo-notifications"
+      ]
+    }
+  },
+  "overrides": {
+    "metro": "0.83.8",
+    "metro-babel-transformer": "0.83.8",
+    "metro-cache": "0.83.8",
+    "metro-cache-key": "0.83.8",
+    "metro-config": "0.83.8",
+    "metro-core": "0.83.8",
+    "metro-file-map": "0.83.8",
+    "metro-minify-terser": "0.83.8",
+    "metro-resolver": "0.83.8",
+    "metro-runtime": "0.83.8",
+    "metro-source-map": "0.83.8",
+    "metro-symbolicate": "0.83.8",
+    "metro-transform-plugins": "0.83.8",
+    "metro-transform-worker": "0.83.8",
+    "ob1": "0.83.8",
+    "xcode": {
+      "uuid": "11.1.1"
+    }
+  }
 }
