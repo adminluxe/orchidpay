@@ -1,4 +1,3 @@
-
 # OrchidPay — Roadbook Delta — OP-WEB-LEGAL — 2026-09-19
 
 ## Scope
@@ -11,6 +10,7 @@ Public-web hardening only. No mobile binary, payment, settlement, GitHub main, p
 - protected baseline branch: `main`
 - baseline commit: `f761ebafb4ee0efe26f50a50db4a3916b475e9dc`
 - working branch: `web/orchidpay-public-legal-20260919`
+- PR: `#6 feat(web): harden OrchidPay public site and legal surface`
 
 ## Public-site package added
 
@@ -53,7 +53,7 @@ Strictly necessary network/security processing by infrastructure providers remai
 
 ## App Store target URLs
 
-Use only after live deployment and HTTP/TLS verification:
+Use only after live production deployment and HTTP/TLS verification:
 
 - Privacy Policy URL: `https://orchidpay.online/privacy/`
 - User Privacy Choices URL: `https://orchidpay.online/privacy-choices/`
@@ -75,10 +75,56 @@ Therefore:
 
 This delta does not rebuild the app and does not authorize Build 7. A separate controlled mobile decision is required before final App Review submission.
 
+## Validation
+
+Static-source review on the PR branch:
+
+- third-party JavaScript: NONE
+- advertising / behavioural analytics tags: NONE
+- remote fonts/assets: NONE
+- internal route-link integrity: PASS
+- legal/public routes present: PASS
+- restrictive static headers prepared: PASS
+
 ## Deployment state
+
+GitHub/Vercel integration automatically produced a successful preview deployment for head commit:
+
+`692f15cad8df7104dd2a44f75c5aaadc1e561f18`
+
+GitHub combined status:
+
+`VERCEL=SUCCESS / Deployment has completed`
+
+Vercel bot state:
+
+`PREVIEW=READY`
+
+Preview URL reported by Vercel:
+
+`https://orchidpay-git-web-orchidpay-public-l-98cd93-adminluxes-projects.vercel.app`
+
+Therefore:
 
 `GITHUB_SOURCE_PREPARED=YES`
 
-`PUBLIC_DEPLOYMENT=NOT_PERFORMED_BY_THIS_DELTA`
+`VERCEL_PREVIEW_DEPLOYED=YES`
 
-The current production origin/deployment path for `orchidpay.online` is not encoded in the canonical OrchidPay repository, so no blind server mutation is performed.
+`VERCEL_PREVIEW_STATUS=READY`
+
+`PR6_MERGED=NO`
+
+`MAIN_MUTATED=NO`
+
+`ORCHIDPAY_ONLINE_PRODUCTION_UPDATED=NO`
+
+`CUSTOM_DOMAIN_MAPPING_VERIFIED=NO`
+
+The external preview/custom-domain pages could not be independently fetched from the current execution environment. No production merge or blind custom-domain mutation is performed until the preview is visually/HTTP verified from a reachable environment.
+
+## Next controlled gate
+
+1. Verify the Vercel preview visually and confirm that the new landing/legal routes are actually being served.
+2. Confirm Vercel project root/output maps `site/` correctly.
+3. Resolve the Build 6 in-app privacy-link requirement separately.
+4. Only then authorize merge/deployment to production and populate App Store Connect with the live HTTPS URLs.
