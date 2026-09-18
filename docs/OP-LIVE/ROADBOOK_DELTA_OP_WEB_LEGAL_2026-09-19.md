@@ -86,21 +86,39 @@ Static-source review on the PR branch:
 - legal/public routes present: PASS
 - restrictive static headers prepared: PASS
 
-## Deployment state
+## Vercel root-cause and remediation
 
-GitHub/Vercel integration automatically produced a successful preview deployment for head commit:
+Initial preview deployments were reported as READY by Vercel, but opening the preview returned the repository-root Expo entry file `index.js` as a raw document instead of the intended static landing.
 
-`692f15cad8df7104dd2a44f75c5aaadc1e561f18`
+Root cause:
 
-GitHub combined status:
+- the repository is primarily an Expo/React Native app;
+- Vercel project root was the repository root;
+- no root `vercel.json` existed;
+- the static public site lives under `site/`.
 
-`VERCEL=SUCCESS / Deployment has completed`
+Remediation commit:
 
-Vercel bot state:
+`e3c9efdfb589aa5dd153d6d552b3195963ff78f7`
+
+Added root `vercel.json`:
+
+- `framework: null`
+- `buildCommand: null`
+- `outputDirectory: "site"`
+- security headers moved into Vercel-compatible configuration
+
+This forces Vercel to publish `site/` rather than exposing the Expo application entrypoint.
+
+GitHub/Vercel status for the remediation commit:
+
+`VERCEL=SUCCESS`
+
+Vercel bot:
 
 `PREVIEW=READY`
 
-Preview URL reported by Vercel:
+Preview URL:
 
 `https://orchidpay-git-web-orchidpay-public-l-98cd93-adminluxes-projects.vercel.app`
 
@@ -108,9 +126,9 @@ Therefore:
 
 `GITHUB_SOURCE_PREPARED=YES`
 
-`VERCEL_PREVIEW_DEPLOYED=YES`
+`VERCEL_STATIC_ROOT_FIX=APPLIED`
 
-`VERCEL_PREVIEW_STATUS=READY`
+`VERCEL_DEPLOYMENT_STATUS=SUCCESS`
 
 `PR6_MERGED=NO`
 
@@ -118,13 +136,11 @@ Therefore:
 
 `ORCHIDPAY_ONLINE_PRODUCTION_UPDATED=NO`
 
-`CUSTOM_DOMAIN_MAPPING_VERIFIED=NO`
-
-The external preview/custom-domain pages could not be independently fetched from the current execution environment. No production merge or blind custom-domain mutation is performed until the preview is visually/HTTP verified from a reachable environment.
+The preview must still be visually reloaded from a reachable client to certify that the correct static landing is now served.
 
 ## Next controlled gate
 
-1. Verify the Vercel preview visually and confirm that the new landing/legal routes are actually being served.
-2. Confirm Vercel project root/output maps `site/` correctly.
+1. Reload the same Vercel preview after the root/output fix.
+2. Confirm the OrchidPay landing and legal routes render instead of `index.js`.
 3. Resolve the Build 6 in-app privacy-link requirement separately.
-4. Only then authorize merge/deployment to production and populate App Store Connect with the live HTTPS URLs.
+4. Only then authorize PR #6 merge / production deployment and populate App Store Connect with the live HTTPS URLs.
