@@ -1,0 +1,134 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="OrchidPay, initiative de Purple Orchid Group : infrastructure de paiement mobile en programme pilote privé, conçue avec une approche fail-closed.">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#07050b">
+  <title>OrchidPay — Payment infrastructure, built to fail closed</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap nav">
+      <a class="brand" href="/" aria-label="OrchidPay accueil">
+        <span class="wordmark">ORCHIDPAY</span>
+        <span class="brand-sub">A Purple Orchid Group initiative</span>
+      </a>
+      <nav class="navlinks" aria-label="Navigation principale">
+        <a href="#product">Produit</a>
+        <a href="#security">Sécurité</a>
+        <a href="#status">Statut</a>
+        <a href="/support/">Support</a>
+        <a href="/privacy/">Confidentialité</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="status-pill">Private pilot · Live payments off</span>
+          <div class="eyebrow" style="margin-top:26px">OrchidPay · Infrastructure de paiement</div>
+          <h1>Move money.<br>Keep control.</h1>
+          <p class="lead">Une expérience mobile pensée pour préparer, vérifier et sécuriser chaque opération avant toute exécution.</p>
+          <p class="sublead">La version actuellement testée est un pilote privé. Elle n’exécute aucun paiement réel, ne conserve aucun fonds client et n’active aucun règlement en production.</p>
+          <div class="actions">
+            <a class="btn primary" href="#product">Découvrir le pilote</a>
+            <a class="btn" href="/support/">Support & review</a>
+          </div>
+        </div>
+        <div class="orbit" aria-hidden="true">
+          <div class="axis-x"></div><div class="axis-y"></div>
+          <i class="node n1"></i><i class="node n2"></i><i class="node n3"></i><i class="node n4"></i>
+        </div>
+      </div>
+    </section>
+
+    <div class="trust-strip">
+      <div class="wrap trust-list">
+        <span>Fail-closed by design</span>
+        <span>Strong validation gates</span>
+        <span>No advertising tracking</span>
+        <span>Private pilot</span>
+      </div>
+    </div>
+
+    <section class="section" id="product">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Produit</div>
+          <h2>Simple en surface. Strict sous le capot.</h2>
+          <p class="section-copy">OrchidPay explore une couche de paiement mobile pour les écosystèmes numériques de Purple Orchid Group. L’interface permet aujourd’hui de tester les parcours essentiels sans ouvrir de capacité financière réelle au public.</p>
+        </div>
+        <div class="cards">
+          <article class="card"><div class="num">01 · SEND</div><h3>Préparer un transfert</h3><p>Saisie du destinataire et du montant, contrôles de format et aperçu avant toute action sensible. <strong>Aucun débit réel dans le pilote.</strong></p></article>
+          <article class="card"><div class="num">02 · RECEIVE</div><h3>Recevoir sans ambiguïté</h3><p>Parcours de réception et identifiants de démonstration conçus pour être vérifiés avant activation de futurs payloads signés.</p></article>
+          <article class="card"><div class="num">03 · CONTROL</div><h3>Piloter la sécurité</h3><p>Session protégée, garde-fous d’intégrité et politique de blocage par défaut lorsque la chaîne de confiance n’est pas complète.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="security">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Sécurité</div>
+          <h2>La confiance n’est pas un écran marketing.</h2>
+          <p class="section-copy">L’architecture du projet impose une séparation stricte entre l’interface de démonstration et toute future exécution financière. Les fonctions sensibles restent fermées tant que les contrôles serveur, l’authentification forte, l’idempotence et les autorisations de production ne sont pas réunis.</p>
+        </div>
+        <div class="cards">
+          <article class="card"><div class="num">A · AUTH</div><h3>Validation forte</h3><p>Les opérations sensibles sont conçues pour exiger une authentification et une autorisation explicites avant exécution.</p></article>
+          <article class="card"><div class="num">B · INTENT</div><h3>Intent signé</h3><p>La cible d’architecture exige des instructions de paiement validées côté serveur plutôt qu’une confiance implicite dans le terminal.</p></article>
+          <article class="card"><div class="num">C · DEFAULT</div><h3>Fail closed</h3><p>En cas de doute, d’état incomplet ou de contrôle manquant : aucune opération financière réelle ne doit partir.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Statut public</div>
+          <h2>Pilote privé. Pas encore un service de paiement public.</h2>
+          <p class="section-copy">OrchidPay est actuellement une initiative de Purple Orchid Group en phase de test. Purple Orchid Group est elle-même en cours de constitution au Luxembourg. La version pilote ne doit pas être interprétée comme une offre de services de paiement réglementés, une autorisation de la CSSF ou la disponibilité d’un portefeuille de monnaie électronique.</p>
+        </div>
+        <div class="callout"><strong>Important :</strong> les soldes, transactions, cartes, QR et parcours visibles dans la version test peuvent contenir des données de démonstration. Aucun dépôt, retrait, règlement ou transfert monétaire réel n’est activé dans cette version.</div>
+      </div>
+    </section>
+
+    <section class="section" id="transparency">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Transparence</div>
+          <h2>Les liens utiles, au même endroit.</h2>
+          <p class="section-copy">La documentation publique est volontairement séparée du discours produit pour rester lisible par les utilisateurs, les testeurs et les équipes de review.</p>
+        </div>
+        <div class="legal-grid">
+          <a class="legal-link" href="/privacy/"><b>Privacy Policy / Confidentialité</b><span>Données du site et du pilote iOS, droits RGPD, conservation et suppression.</span></a>
+          <a class="legal-link" href="/privacy-choices/"><b>Privacy Choices / Vos choix</b><span>Accès, rectification, opposition, effacement et demandes de confidentialité.</span></a>
+          <a class="legal-link" href="/terms/"><b>Terms / Conditions</b><span>Cadre d’utilisation du site et du programme pilote OrchidPay.</span></a>
+          <a class="legal-link" href="/legal/"><b>Legal Notice / Mentions légales</b><span>Éditeur transitoire, statut du projet, propriété intellectuelle et infrastructure.</span></a>
+          <a class="legal-link" href="/cookies/"><b>Cookies & local storage</b><span>Pas de publicité ni analytics délibérés sur cette landing.</span></a>
+          <a class="legal-link" href="/support/"><b>Support & Security</b><span>Assistance, signalement de sécurité et informations pour la review.</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-row">
+      <small><strong style="color:#d8d1df">ORCHIDPAY</strong><br>Initiative de Purple Orchid Group · programme pilote privé · © 2026. Aucun service de paiement public n’est actuellement fourni par cette landing.</small>
+      <nav aria-label="Liens légaux">
+        <a href="/privacy/">Confidentialité</a>
+        <a href="/privacy-choices/">Vos choix</a>
+        <a href="/terms/">Conditions</a>
+        <a href="/legal/">Mentions légales</a>
+        <a href="/cookies/">Cookies</a>
+        <a href="/support/">Support</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
