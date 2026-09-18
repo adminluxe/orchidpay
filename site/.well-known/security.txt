@@ -1,0 +1,5 @@
+Contact: mailto:contact@purpleorchidgroup.com
+Preferred-Languages: fr, en
+Canonical: https://orchidpay.online/.well-known/security.txt
+Policy: https://orchidpay.online/support/
+Expires: 2027-09-19T00:00:00Z
