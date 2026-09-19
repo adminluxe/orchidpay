@@ -74,7 +74,7 @@ h1{font-size:clamp(46px,7vw,88px);line-height:.96;letter-spacing:-.055em;margin:
   display:flex;
   align-items:center;
   justify-content:center;
-  min-height:430px;
+  min-height:360px;
 }
 .brand-showcase::before{
   content:"";
@@ -88,7 +88,7 @@ h1{font-size:clamp(46px,7vw,88px);line-height:.96;letter-spacing:-.055em;margin:
   position:relative;
   z-index:1;
   display:block;
-  width:min(100%,430px);
+  width:min(100%,300px);
   height:auto;
   border-radius:30px;
   box-shadow:0 38px 110px rgba(74,21,121,.46),0 0 44px rgba(155,92,255,.16);
@@ -166,8 +166,8 @@ h2{font-size:clamp(32px,4.8vw,58px);line-height:1.03;letter-spacing:-.04em;margi
   .hero{padding-top:76px}
   .hero-grid{grid-template-columns:1fr;gap:44px}
   .brand-showcase{min-height:auto}
-  .hero-brand{width:min(88vw,430px);margin:auto}
-  .orbit{width:min(88vw,430px);margin:auto}
+  .hero-brand{width:min(72vw,300px);margin:auto}
+  .orbit{width:min(72vw,300px);margin:auto}
   .cards{grid-template-columns:1fr}
   .legal-grid{grid-template-columns:1fr}
   .navlinks{display:none}
