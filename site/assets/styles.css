@@ -36,7 +36,9 @@ a{color:inherit}
   border-bottom:1px solid rgba(255,255,255,.06);
 }
 .nav{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:22px}
-.brand{display:flex;align-items:center;gap:14px;text-decoration:none}
+.brand{display:flex;align-items:center;gap:13px;text-decoration:none}
+.brand-mark{width:46px;height:46px;border-radius:13px;object-fit:cover;box-shadow:0 0 28px rgba(155,92,255,.34);border:1px solid rgba(241,201,119,.28)}
+.brand-copy{display:flex;flex-direction:column;gap:3px}
 .wordmark{font-weight:900;letter-spacing:.08em;font-size:15px}
 .brand-sub{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .navlinks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -67,6 +69,31 @@ h1{font-size:clamp(46px,7vw,88px);line-height:.96;letter-spacing:-.055em;margin:
 }
 .btn.primary{background:#f7f4fb;color:#100b16;border-color:#f7f4fb}
 .btn:hover{transform:translateY(-1px)}
+.brand-showcase{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:430px;
+}
+.brand-showcase::before{
+  content:"";
+  position:absolute;
+  inset:10%;
+  border-radius:32%;
+  background:radial-gradient(circle,rgba(155,92,255,.24),rgba(155,92,255,.06) 54%,transparent 72%);
+  filter:blur(18px);
+}
+.hero-brand{
+  position:relative;
+  z-index:1;
+  display:block;
+  width:min(100%,430px);
+  height:auto;
+  border-radius:30px;
+  box-shadow:0 38px 110px rgba(74,21,121,.46),0 0 44px rgba(155,92,255,.16);
+  border:1px solid rgba(241,201,119,.18);
+}
 .orbit{
   position:relative;aspect-ratio:1/1;border-radius:50%;
   background:
@@ -138,6 +165,8 @@ h2{font-size:clamp(32px,4.8vw,58px);line-height:1.03;letter-spacing:-.04em;margi
 @media(max-width:860px){
   .hero{padding-top:76px}
   .hero-grid{grid-template-columns:1fr;gap:44px}
+  .brand-showcase{min-height:auto}
+  .hero-brand{width:min(88vw,430px);margin:auto}
   .orbit{width:min(88vw,430px);margin:auto}
   .cards{grid-template-columns:1fr}
   .legal-grid{grid-template-columns:1fr}
