@@ -35,3 +35,15 @@ Immediate public-web UX correction only.
 `DNS_MUTATION=NO`
 
 `WEB_UX_ONLY=YES`
+
+
+## Final brand asset correction
+
+The previous production WebP blob did not correspond to the verified approved logo asset and rendered as an empty frame.
+
+It is now replaced by a verified 320×320 WebP derived from the already-approved OrchidPay logo supplied in this project. No new logo/design was generated.
+
+- `site/assets/orchidpay-brand.webp` blob: `7849d4544595843e24adc7c2979e81316e728d11`
+- hero uses the corrected WebP with cache-busting query `?v=ux3`
+- header keeps the already-proven `/favicon.png` mark for maximum robustness
+- Open Graph image uses the corrected WebP
