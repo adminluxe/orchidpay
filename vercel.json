@@ -5,6 +5,13 @@
   "outputDirectory": "site",
   "headers": [
     {
+      "source": "/healthz",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
