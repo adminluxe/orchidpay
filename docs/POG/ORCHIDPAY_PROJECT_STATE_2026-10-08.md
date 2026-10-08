@@ -17,7 +17,7 @@ The current B12 candidate is a hardened Store surface that preserves the securit
 
 Current checkpoint:
 
-**B12 R5 CLOUD-BUILD HARDENING — PRE-DOC GATE GREEN / FINAL EXACT-TREE SEAL PENDING**
+**B12 R5 CLOUD-BUILD HARDENING — COMMIT-BOUNDARY GREEN / FINAL SEALED-TREE RERUN REQUIRED BEFORE COMMIT**
 
 No paid B12 build or Store submission is authorized yet.
 
@@ -194,7 +194,7 @@ Current promotion state:
 - R5 pre-documentation full gate: PASS;
 - R5 roadbook/architecture/forensics refresh: COMPLETE;
 - R5 staged exact-tree gate: PASS (RC=0);
-- R5 final no-mutation gate: PENDING;
+- R5 commit-boundary gate: PASS (RC=0); final sealed-tree rerun required immediately before commit;
 - R5 commit/push/tag: PENDING;
 - PR/CI: PENDING;
 - paid B12 EAS build: NOT STARTED;

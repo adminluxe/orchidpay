@@ -1,6 +1,6 @@
 # OrchidPay B12 R5 - Cloud Build Chain Seal - 2026-10-08
 
-Status: STAGE-1 GREEN / FINAL COMMIT-BOUNDARY GATE MANDATORY
+Status: COMMIT-BOUNDARY GREEN / FINAL SEALED-TREE RERUN REQUIRED IMMEDIATELY BEFORE COMMIT
 Branch: reconcile/b12-premium-store-ready-20261008
 R4 sealed base: 362695fec25fe6f9402b243fa8c18890876d8c31
 R4 tag: orchidpay/b12-r4-green-20261008
@@ -111,3 +111,11 @@ This seal does not authorize:
 - Google Play submission;
 - provider activation;
 - live payment execution.
+
+## Commit-boundary proof obtained
+
+The aligned R5 evidence tree completed the full hardened gate with RC=0 and `FINAL_ORCHIDPAY_B12_GATE=PASS`.
+
+This proof includes Foojay 1.0.0 effective in the generated React Native Gradle included build, Android Release manifest merge PASS, required merged permissions present, forbidden merged permissions absent, iOS/Android packaged B11 signatures absent, and native privacy/dependency gates PASS.
+
+A final sealed-tree rerun remains a mechanical pre-commit requirement after this status/checksum stamp. No tracked or staged mutation is allowed after that final PASS.

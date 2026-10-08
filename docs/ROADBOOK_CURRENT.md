@@ -50,7 +50,7 @@
 - R4 exact-tree B12 gate: **PASS (RC=0)**
 - R5 pre-documentation full gate: **PASS**
 - R5 staged exact-tree gate: **PASS (RC=0)**
-- R5 final no-mutation gate before commit: **PENDING**
+- R5 commit-boundary gate: **PASS (RC=0)**; one final sealed-tree no-mutation rerun is required immediately before commit
 - B12 paid build / Store submit: **NOT AUTHORIZED / NOT PERFORMED**
 
 ## Promotion sequence

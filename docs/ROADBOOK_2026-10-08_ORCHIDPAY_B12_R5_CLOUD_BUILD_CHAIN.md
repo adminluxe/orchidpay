@@ -1,6 +1,6 @@
 # OrchidPay — Roadbook — B12 R5 Cloud Build Chain — 2026-10-08
 
-**Status:** PRE-RELEASE / CLOUD-BUILD HARDENED / STAGED EXACT-TREE GREEN / FINAL NO-MUTATION GATE PENDING
+**Status:** PRE-RELEASE / CLOUD-BUILD HARDENED / COMMIT-BOUNDARY GATE GREEN / PAID BUILD NOT STARTED
 **Repository:** `adminluxe/orchidpay`
 **Candidate branch:** `reconcile/b12-premium-store-ready-20261008`
 **R4 sealed base:** `362695fec25fe6f9402b243fa8c18890876d8c31`
@@ -217,3 +217,16 @@ Additional R5 markers proven on that staged tree:
 This Stage-1 result is the source for the R5 runtime seal and checksum manifest.
 
 Commit boundary rule: after the seal/checksum files are staged, the complete one-shot must run again and return RC=0. No tracked or staged file may change between that final successful run and the R5 commit.
+
+## 12. Commit-boundary proof — PASS
+
+After the R5 evidence files were aligned and staged, the complete hardened one-shot returned RC=0.
+
+Observed proof markers:
+- `RN_FOOJAY_1_0_EFFECTIVE=PASS`;
+- `ANDROID_RELEASE_MANIFEST_MERGE=PASS`;
+- `ANDROID_MERGED_REQUIRED_PERMISSIONS=PASS`;
+- `ANDROID_MERGED_FORBIDDEN_PERMISSIONS=ABSENT_PASS`;
+- `FINAL_ORCHIDPAY_B12_GATE=PASS`.
+
+This establishes the R5 commit-boundary proof. After this final documentation/checksum stamp, the complete gate must be executed once more on the sealed staged tree. No tracked or staged file may change after that final successful run and before commit.

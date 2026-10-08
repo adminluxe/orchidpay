@@ -1,6 +1,6 @@
 # OrchidPay — Architecture Pin — 2026-10-08
 
-**Status:** B12 R5 CLOUD-BUILD HARDENED PRE-RELEASE CANDIDATE / FAIL-CLOSED / NO LIVE PAYMENT AUTHORIZATION
+**Status:** B12 R5 CLOUD-BUILD HARDENED / COMMIT-BOUNDARY GREEN / FAIL-CLOSED / NO LIVE PAYMENT AUTHORIZATION
 **Canonical repository:** `adminluxe/orchidpay`
 **Canonical base at materialization:** `4cec70daad7f0c25ad681da8690cf82d85bacf8c`
 **Candidate branch:** `reconcile/b12-premium-store-ready-20261008`
