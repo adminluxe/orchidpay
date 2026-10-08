@@ -1,7 +1,7 @@
 # OrchidPay — Roadbook Current
 
 **Current checkpoint:** 2026-10-08
-**Current candidate:** B12 Hardened Store Candidate
+**Current candidate:** B12 R5 Cloud Build Hardened Candidate
 **Canonical repo:** `adminluxe/orchidpay`
 **Protected base:** `main`
 
@@ -11,6 +11,9 @@
    `docs/ARCHITECTURE_PIN.md`
 
 2. Detailed current roadbook:
+   `docs/ROADBOOK_2026-10-08_ORCHIDPAY_B12_R5_CLOUD_BUILD_CHAIN.md`
+
+   Previous B12 Store-hardening roadbook:
    `docs/ROADBOOK_2026-10-08_ORCHIDPAY_B12_PREMIUM_STORE_READY.md`
 
 3. B11 forensic audit:
@@ -44,7 +47,10 @@
 - Android POST_NOTIFICATIONS: **absent**
 - camera 5.1.1(iv) remediation: **preserved**
 - packaged B11 signatures in current iOS/Android exports: **0 / 0**
-- final exact-tree B12 gate: **PASS (RC=0)**
+- R4 exact-tree B12 gate: **PASS (RC=0)**
+- R5 pre-documentation full gate: **PASS**
+- R5 staged exact-tree gate: **PASS (RC=0)**
+- R5 final no-mutation gate before commit: **PENDING**
 - B12 paid build / Store submit: **NOT AUTHORIZED / NOT PERFORMED**
 
 ## Promotion sequence
@@ -84,3 +90,21 @@ Key final markers:
 - FINAL_ORCHIDPAY_B12_GATE=PASS.
 
 No paid build or Store mutation has been performed. Promotion remains gated by final evidence checksum, R4 exact-tree rerun, commit/push, PR/CI/review and a separate build decision.
+
+### 2026-10-08 — B12 R5 cloud-build chain hardening
+
+R4 remains the sealed historical source-readiness checkpoint at `362695f` / `orchidpay/b12-r4-green-20261008`.
+
+R5 supersedes the R4 validation-only Foojay workaround for future Android cloud-build readiness:
+- production Android EAS image pinned to `sdk-55`;
+- official `eas-build-post-install` hook added;
+- tracked, hash-pinned `scripts/fix-rn-foojay-gradle9.cjs`;
+- React Native Gradle plugin version constrained to `0.83.10`;
+- Foojay resolver upgraded in the build workspace from `0.5.0` to `1.0.0`;
+- non-Android EAS builds are not mutated by the compatibility script;
+- the one-shot verifies the patch before Gradle;
+- Gradle Release manifest merging remains mandatory.
+
+A disposable EAS-order lab, the pre-documentation gate and the R5 stage-1 staged exact-tree gate all passed, including the real Release-manifest merge. The R5 evidence seal/checksums are generated from that RC=0 result. A second full gate is mandatory at the commit boundary; the seal is void if that final gate is not RC=0 or if any file changes afterward.
+
+Paid build and Store submission remain HOLD.

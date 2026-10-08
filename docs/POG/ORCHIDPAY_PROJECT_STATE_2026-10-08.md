@@ -17,7 +17,7 @@ The current B12 candidate is a hardened Store surface that preserves the securit
 
 Current checkpoint:
 
-**B12 HARDENED EXACT-TREE GATE GREEN — SOURCE SEAL PREPARATION**
+**B12 R5 CLOUD-BUILD HARDENING — PRE-DOC GATE GREEN / FINAL EXACT-TREE SEAL PENDING**
 
 No paid B12 build or Store submission is authorized yet.
 
@@ -167,3 +167,35 @@ This is a source/readiness milestone only:
 - no live-payment claim.
 
 The evidence remains non-production until the branch is sealed through final R4, commit/push and PR/CI/review.
+
+## B12 R5 cloud-build checkpoint
+
+R4 has been committed, pushed and tagged:
+- commit: `362695fec25fe6f9402b243fa8c18890876d8c31`;
+- tag: `orchidpay/b12-r4-green-20261008`.
+
+R5 is an incremental build-chain hardening layer above that sealed checkpoint.
+
+R5 current worktree adds:
+- production Android EAS image `sdk-55`;
+- official Android EAS post-install compatibility hook;
+- tracked/hash-pinned Foojay compatibility script;
+- exact React Native Gradle plugin version guard;
+- Foojay `0.5.0 -> 1.0.0` patch in the build workspace;
+- gate assertions proving the patch is effective before Gradle.
+
+A disposable EAS-order lab passed through the real Gradle Release-manifest task.
+
+The R5 worktree also completed a full pre-documentation gate with `FINAL_ORCHIDPAY_B12_GATE=PASS`.
+
+Current promotion state:
+- R4 commit/push/tag: COMPLETE;
+- R5 code/build-chain hardening: COMPLETE;
+- R5 pre-documentation full gate: PASS;
+- R5 roadbook/architecture/forensics refresh: COMPLETE;
+- R5 staged exact-tree gate: PASS (RC=0);
+- R5 final no-mutation gate: PENDING;
+- R5 commit/push/tag: PENDING;
+- PR/CI: PENDING;
+- paid B12 EAS build: NOT STARTED;
+- Store submission: NOT STARTED.

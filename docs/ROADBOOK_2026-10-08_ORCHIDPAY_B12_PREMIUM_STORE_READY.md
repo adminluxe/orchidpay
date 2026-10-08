@@ -330,3 +330,60 @@ The candidate remains source/release-ready only. No paid EAS build or Store subm
 
 The next integrity sequence is:
 R3 EVIDENCE -> SHA256 REFRESH -> STAGE -> R4 EXACT-TREE -> COMMIT -> PUSH -> PR/CI -> BUILD DECISION.
+
+## 20. R5 — cloud-build reproducibility hardening
+
+R4 closed the B11 forensic/product-surface defects and proved the effective Android Release permissions.
+
+A further upstream build-chain risk was then isolated: React Native `0.83.10` pins Foojay resolver `0.5.0`, which can fail under Gradle 9 with `NoSuchFieldError: IBM_SEMERU`.
+
+R5 does not downgrade Gradle or alter OrchidPay business logic.
+
+Instead it:
+- pins the EAS Android production image to `sdk-55`;
+- uses the official `eas-build-post-install` lifecycle hook;
+- tracks `scripts/fix-rn-foojay-gradle9.cjs`;
+- guards the exact React Native plugin version;
+- upgrades only the known Foojay declaration to `1.0.0`;
+- no-ops for explicitly non-Android EAS builds;
+- fails on any unknown upstream declaration state;
+- verifies exact script SHA provenance in the one-shot;
+- requires Foojay `1.0.0` before the Gradle Release manifest merge.
+
+The EAS-order lab passed with Gradle `BUILD SUCCESSFUL`, and the R5 worktree subsequently passed the full pre-documentation B12 gate.
+
+## 21. R5 seal state
+
+R4 remains preserved at:
+- commit `362695fec25fe6f9402b243fa8c18890876d8c31`;
+- tag `orchidpay/b12-r4-green-20261008`.
+
+R5 is not yet sealed.
+
+Before R5 commit/push/tag:
+1. stage all R5 code and documentation;
+2. run the complete exact-tree gate;
+3. create R5 gate markers and SHA-256 evidence only after PASS;
+4. stage that evidence;
+5. run the complete gate one last time with no later source/doc mutation;
+6. commit, push and tag;
+7. open/reconcile PR and require CI/review;
+8. make a separate paid-build decision.
+
+No paid EAS build or Store submission is authorized at this checkpoint.
+
+## 22. R5 staged exact-tree gate — GREEN
+
+The fully staged R5 code and documentation tree completed the complete B12 one-shot with RC=0.
+
+Key additional R5 markers:
+- `FOOJAY_FIX_SCRIPT_TRACKED=PASS`;
+- `FOOJAY_FIX_SCRIPT_PROVENANCE=PASS`;
+- `RN_FOOJAY_GRADLE9_COMPAT=PASS`;
+- `RN_FOOJAY_1_0_EFFECTIVE=PASS`;
+- `ANDROID_RELEASE_MANIFEST_MERGE=PASS`;
+- `ANDROID_MERGED_REQUIRED_PERMISSIONS=PASS`;
+- `ANDROID_MERGED_FORBIDDEN_PERMISSIONS=ABSENT_PASS`;
+- `FINAL_ORCHIDPAY_B12_GATE=PASS`.
+
+The R5 evidence files are prepared from this state. A final no-mutation full gate remains mandatory after evidence staging and before commit.

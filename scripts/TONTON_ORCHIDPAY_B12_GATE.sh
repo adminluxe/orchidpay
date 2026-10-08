@@ -6,6 +6,7 @@ cd "$ROOT"
 
 EXPECTED_STORE_ICON_SHA="5f35922b1dae387c344da2e8d91396243392fd08f33e7171afd87a6752b9d7b3"
 EXPECTED_INAPP_MARK_SHA="f807a3d2c11f9b15f75fccea29526df684caf4ccc5a21e9b9eb4527dc4a4d40e"
+EXPECTED_FOOJAY_FIX_SHA="d5731db4d02e860aae00b6d3f76265dd7cfba79a5d8804ffc69154a1ffabb96c"
 
 TMP_WORK="$(mktemp -d /tmp/orchidpay-b12-gate-XXXXXX)"
 TMP_EXPORT=""
@@ -67,6 +68,15 @@ if grep -q 'serviceAccountKeyPath' eas.json; then
 fi
 echo "EAS_SECRET_PATH=PASS"
 
+node - <<'NODE'
+const e = require('./eas.json');
+if (e.build?.production?.android?.image !== 'sdk-55') {
+  console.error('EAS_ANDROID_IMAGE_SDK55=FAIL');
+  process.exit(15);
+}
+console.log('EAS_ANDROID_IMAGE_SDK55=PASS');
+NODE
+
 say "STORE DEPENDENCY PRUNE"
 node - <<'NODE'
 const p = require('./package.json');
@@ -81,8 +91,19 @@ if (excluded.includes('expo-notifications')) {
   console.error('STALE_EXPO_NOTIFICATIONS_AUTOLINK_EXCLUDE');
   process.exit(13);
 }
+const expectedHook = 'node scripts/fix-rn-foojay-gradle9.cjs';
+if (p.scripts?.['eas-build-post-install'] !== expectedHook) {
+  console.error('EAS_BUILD_POST_INSTALL_HOOK=FAIL');
+  process.exit(16);
+}
+if (p.scripts?.['verify:foojay'] !== expectedHook + ' --check') {
+  console.error('FOOJAY_VERIFY_SCRIPT=FAIL');
+  process.exit(17);
+}
 console.log('FORBIDDEN_STORE_DEPENDENCIES=ABSENT_PASS');
 console.log('STALE_NOTIFICATION_AUTOLINK_CONFIG=ABSENT_PASS');
+console.log('EAS_BUILD_POST_INSTALL_HOOK=PASS');
+console.log('FOOJAY_VERIFY_SCRIPT=PASS');
 NODE
 if grep -Eq '"expo-(dev-client|notifications|status-bar)"' package-lock.json; then
   echo "FORBIDDEN_STORE_DEPENDENCY_LOCK=FAIL"
@@ -93,6 +114,23 @@ echo "FORBIDDEN_STORE_DEPENDENCY_LOCK=ABSENT_PASS"
 say "CLEAN INSTALL"
 npm ci --no-audit --no-fund >"$TMP_WORK/npm-ci.log" 2>&1
 echo "NPM_CI=PASS"
+
+say "REACT NATIVE GRADLE 9 / FOOJAY COMPATIBILITY"
+if ! git ls-files --error-unmatch scripts/fix-rn-foojay-gradle9.cjs >/dev/null 2>&1; then
+  echo "FOOJAY_FIX_SCRIPT_TRACKED=FAIL"
+  exit 18
+fi
+FOOJAY_FIX_SHA="$(sha256sum scripts/fix-rn-foojay-gradle9.cjs | awk '{print $1}')"
+if [ "$FOOJAY_FIX_SHA" != "$EXPECTED_FOOJAY_FIX_SHA" ]; then
+  echo "FOOJAY_FIX_SCRIPT_PROVENANCE=FAIL actual=$FOOJAY_FIX_SHA"
+  exit 19
+fi
+echo "FOOJAY_FIX_SCRIPT_TRACKED=PASS"
+echo "FOOJAY_FIX_SCRIPT_PROVENANCE=PASS"
+
+npm run eas-build-post-install
+npm run verify:foojay
+echo "RN_FOOJAY_GRADLE9_COMPAT=PASS"
 
 say "EXPO DOCTOR"
 npx expo-doctor | tee "$TMP_WORK/expo-doctor.log"
@@ -414,6 +452,9 @@ TMP_PREBUILD="$(mktemp -d /tmp/orchidpay-b12-prebuild-XXXXXX)"
 rsync -a --exclude=node_modules --exclude=.git "$ROOT/" "$TMP_PREBUILD/"
 cd "$TMP_PREBUILD"
 npm ci --no-audit --no-fund >"$TMP_WORK/prebuild-npm-ci.log" 2>&1
+npm run eas-build-post-install >"$TMP_WORK/prebuild-foojay-fix.log" 2>&1
+npm run verify:foojay >>"$TMP_WORK/prebuild-foojay-fix.log" 2>&1
+echo "PREBUILD_RN_FOOJAY_GRADLE9_COMPAT=PASS"
 
 node - <<'NODE'
 const p = require('./package.json');
@@ -544,17 +585,15 @@ if [ ! -f "$RN_GRADLE_SETTINGS" ]; then
   echo "RN_GRADLE_TOOLCHAIN_SETTINGS=FAIL"
   exit 58
 fi
-if ! grep -q 'org.gradle.toolchains.foojay-resolver-convention' "$RN_GRADLE_SETTINGS"; then
-  echo "RN_FOOJAY_EXPECTED_RESOLVER=DRIFT_FAIL"
+if ! grep -q 'org.gradle.toolchains.foojay-resolver-convention").version("1.0.0")' "$RN_GRADLE_SETTINGS"; then
+  echo "RN_FOOJAY_1_0_EFFECTIVE=FAIL"
   exit 59
 fi
-cp "$RN_GRADLE_SETTINGS" "$TMP_WORK/react-native-gradle-plugin-settings.before.kts"
-sed -i '/org.gradle.toolchains.foojay-resolver-convention/d' "$RN_GRADLE_SETTINGS"
-if grep -q 'org.gradle.toolchains.foojay-resolver-convention' "$RN_GRADLE_SETTINGS"; then
-  echo "RN_FOOJAY_VALIDATION_LAB_DISABLE=FAIL"
+if grep -q 'org.gradle.toolchains.foojay-resolver-convention").version("0.5.0")' "$RN_GRADLE_SETTINGS"; then
+  echo "RN_FOOJAY_0_5_STILL_PRESENT=FAIL"
   exit 60
 fi
-echo "RN_FOOJAY_VALIDATION_LAB_DISABLE=PASS"
+echo "RN_FOOJAY_1_0_EFFECTIVE=PASS"
 
 mkdir -p "$TMP_PREBUILD/.gradle-metro-tmp"
 printf 'sdk.dir=%s\n' "$ANDROID_SDK" > "$TMP_PREBUILD/android/local.properties"

@@ -239,3 +239,51 @@ Verdict:
 The effective merged Android Release manifest exposed only the expected application/network/biometric permission set. No microphone, overlay, external-storage, notification, contacts, SMS or phone-call permission survived the Release merge.
 
 This R3 verdict supersedes earlier partial green checkpoints that did not yet require the merged Release manifest proof.
+
+## 13. R5 production build-chain correction
+
+R4 proved the Android merged Release manifest by disabling Foojay `0.5.0` only inside a disposable validation copy. That remained an appropriate evidence workaround, but it did not itself guarantee that a fresh EAS Android build would avoid the same upstream resolver incompatibility.
+
+R5 therefore moves the compatibility action to the official Android EAS build lifecycle.
+
+Tracked correction:
+- `scripts/fix-rn-foojay-gradle9.cjs`;
+- exact expected React Native Gradle plugin: `0.83.10`;
+- exact upstream declaration: Foojay `0.5.0`;
+- effective build declaration: Foojay `1.0.0`;
+- exact script SHA-256: `d5731db4d02e860aae00b6d3f76265dd7cfba79a5d8804ffc69154a1ffabb96c`.
+
+The script is invoked by `eas-build-post-install` and is intentionally fail-closed against upstream drift.
+
+A disposable EAS-order lab reproduced:
+
+`npm ci -> expo prebuild -> eas-build-post-install -> Gradle Release manifest merge`
+
+and returned a successful Gradle Release manifest build without deleting the resolver declaration.
+
+The same R5 worktree then completed the full B12 pre-documentation gate with:
+- Foojay `1.0.0` effective;
+- real Android Release manifest merge PASS;
+- required merged permissions present;
+- forbidden merged permissions absent;
+- `FINAL_ORCHIDPAY_B12_GATE=PASS`.
+
+Because tracked-file and SHA provenance checks were added to the gate after that pass, the final exact-tree R5 seal requires another complete rerun.
+
+The R4 record is preserved and not rewritten; R5 supersedes only the current build-readiness strategy.
+
+## 14. R5 staged exact-tree verdict
+
+The R5 candidate was staged with its cloud-build correction and documentation, then rerun through the complete hardened gate.
+
+Verdict:
+- RC `0`;
+- tracked/hash-pinned Foojay compatibility script verified;
+- official EAS Android hook verified;
+- Foojay `1.0.0` effective before Gradle;
+- Android Release manifest merge PASS;
+- effective required permissions PASS;
+- effective forbidden permissions absent;
+- `FINAL_ORCHIDPAY_B12_GATE=PASS`.
+
+This is the evidence source for the R5 pre-seal. A final no-mutation full gate is still required after the evidence files themselves are staged.
