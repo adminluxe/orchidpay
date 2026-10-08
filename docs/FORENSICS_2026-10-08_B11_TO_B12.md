@@ -175,3 +175,67 @@ Required sequence:
 `DOCUMENT -> FULL B12 GATE -> COMMIT -> PUSH -> PR -> CI/REVIEW -> BUILD DECISION -> SUBMIT DECISION`
 
 No paid EAS build or Store mutation is authorized by this document.
+
+## 11. Hardened Android Release-manifest validation
+
+The B12 evidence chain now distinguishes three Android permission layers:
+
+1. app configuration intent in app.json;
+2. generated source-manifest removal directives after Expo prebuild;
+3. the effective merged Release manifest produced by Gradle.
+
+The third layer is authoritative for the permission surface evaluated by Google Play.
+
+A successful isolated Release-manifest lab confirmed these effective active permissions:
+- CAMERA;
+- INTERNET;
+- USE_BIOMETRIC;
+- USE_FINGERPRINT;
+- VIBRATE;
+- ACCESS_NETWORK_STATE;
+- the app-scoped dynamic receiver permission;
+- Google Play install-referrer binding.
+
+The merged Release manifest did not contain:
+- RECORD_AUDIO;
+- SYSTEM_ALERT_WINDOW;
+- READ_EXTERNAL_STORAGE;
+- WRITE_EXTERNAL_STORAGE;
+- POST_NOTIFICATIONS;
+- READ_CONTACTS;
+- WRITE_CONTACTS;
+- READ_SMS;
+- CALL_PHONE.
+
+### Validation-lab toolchain note
+
+React Native 0.83.10 ships a Gradle included-build settings file that pins org.gradle.toolchains.foojay-resolver-convention 0.5.0. With Gradle 9.0.0 this resolver can throw java.lang.NoSuchFieldError: IBM_SEMERU while attempting JDK provisioning.
+
+JDK 17 is already installed locally and is the toolchain requested by the React Native Gradle plugin.
+
+For the disposable validation prebuild only, the gate therefore:
+- verifies that the expected Foojay resolver declaration is present;
+- removes that resolver declaration only from the temporary node_modules copy;
+- uses the preinstalled JDK 17;
+- resolves Android SDK 36 / build-tools 36.0.0 explicitly;
+- uses an isolated Metro temporary cache;
+- executes app:processReleaseMainManifest;
+- parses the resulting merged Release manifest.
+
+No tracked OrchidPay source dependency is patched to hide this Gradle-toolchain incompatibility.
+
+## 12. Hardened exact-tree R3 verdict
+
+The hardened B12 exact-tree gate was rerun after the Release-manifest and Foojay validation-lab controls were added.
+
+Verdict:
+- gate RC: 0;
+- FINAL_ORCHIDPAY_B12_GATE=PASS;
+- RN_FOOJAY_VALIDATION_LAB_DISABLE=PASS;
+- ANDROID_RELEASE_MANIFEST_MERGE=PASS;
+- ANDROID_MERGED_REQUIRED_PERMISSIONS=PASS;
+- ANDROID_MERGED_FORBIDDEN_PERMISSIONS=ABSENT_PASS.
+
+The effective merged Android Release manifest exposed only the expected application/network/biometric permission set. No microphone, overlay, external-storage, notification, contacts, SMS or phone-call permission survived the Release merge.
+
+This R3 verdict supersedes earlier partial green checkpoints that did not yet require the merged Release manifest proof.

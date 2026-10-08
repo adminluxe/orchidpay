@@ -12,6 +12,16 @@ TMP_EXPORT=""
 TMP_PREBUILD=""
 
 cleanup() {
+  rc=$?
+  if [ "$rc" -ne 0 ]; then
+    printf '%s\n' "$rc" > /tmp/orchidpay_b12_gate_last_failure.rc
+    [ -z "$TMP_WORK" ] || printf '%s\n' "$TMP_WORK" > /tmp/orchidpay_b12_gate_last_failure_work.txt
+    [ -z "$TMP_PREBUILD" ] || printf '%s\n' "$TMP_PREBUILD" > /tmp/orchidpay_b12_gate_last_failure_prebuild.txt
+    echo "GATE_FAILURE_RC=$rc"
+    echo "GATE_FAILURE_WORK=$TMP_WORK"
+    echo "GATE_FAILURE_PREBUILD=$TMP_PREBUILD"
+    return
+  fi
   [ -z "$TMP_EXPORT" ] || rm -rf "$TMP_EXPORT"
   [ -z "$TMP_PREBUILD" ] || rm -rf "$TMP_PREBUILD"
   rm -rf "$TMP_WORK"
@@ -496,6 +506,126 @@ print("ANDROID_POST_NOTIFICATIONS=ABSENT_PASS")
 PY
 
 cd "$ROOT"
+
+say "ANDROID MERGED RELEASE MANIFEST GATE"
+ANDROID_SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [ -z "$ANDROID_SDK" ]; then
+  for candidate in \
+    /home/afripayadmin/ATM_ANDROID_SDK \
+    "$HOME/Android/Sdk" \
+    /opt/android-sdk \
+    /usr/local/android-sdk \
+    /usr/lib/android-sdk
+  do
+    if [ -d "$candidate/platforms/android-36" ] && [ -d "$candidate/build-tools/36.0.0" ]; then
+      ANDROID_SDK="$candidate"
+      break
+    fi
+  done
+fi
+if [ -z "$ANDROID_SDK" ] || [ ! -d "$ANDROID_SDK/platforms/android-36" ]; then
+  echo "ANDROID_SDK_36=FAIL"
+  exit 54
+fi
+echo "ANDROID_SDK_36=PASS"
+
+JAVA_HOME_GATE="${JAVA_HOME:-}"
+if [ -d /usr/lib/jvm/java-17-openjdk-amd64 ]; then
+  JAVA_HOME_GATE=/usr/lib/jvm/java-17-openjdk-amd64
+fi
+if [ -z "$JAVA_HOME_GATE" ] || [ ! -x "$JAVA_HOME_GATE/bin/java" ]; then
+  echo "ANDROID_JAVA_GATE=FAIL"
+  exit 55
+fi
+echo "ANDROID_JAVA_GATE=PASS"
+
+RN_GRADLE_SETTINGS="$TMP_PREBUILD/node_modules/@react-native/gradle-plugin/settings.gradle.kts"
+if [ ! -f "$RN_GRADLE_SETTINGS" ]; then
+  echo "RN_GRADLE_TOOLCHAIN_SETTINGS=FAIL"
+  exit 58
+fi
+if ! grep -q 'org.gradle.toolchains.foojay-resolver-convention' "$RN_GRADLE_SETTINGS"; then
+  echo "RN_FOOJAY_EXPECTED_RESOLVER=DRIFT_FAIL"
+  exit 59
+fi
+cp "$RN_GRADLE_SETTINGS" "$TMP_WORK/react-native-gradle-plugin-settings.before.kts"
+sed -i '/org.gradle.toolchains.foojay-resolver-convention/d' "$RN_GRADLE_SETTINGS"
+if grep -q 'org.gradle.toolchains.foojay-resolver-convention' "$RN_GRADLE_SETTINGS"; then
+  echo "RN_FOOJAY_VALIDATION_LAB_DISABLE=FAIL"
+  exit 60
+fi
+echo "RN_FOOJAY_VALIDATION_LAB_DISABLE=PASS"
+
+mkdir -p "$TMP_PREBUILD/.gradle-metro-tmp"
+printf 'sdk.dir=%s\n' "$ANDROID_SDK" > "$TMP_PREBUILD/android/local.properties"
+if ! (
+  cd "$TMP_PREBUILD/android"
+  export JAVA_HOME="$JAVA_HOME_GATE"
+  export PATH="$JAVA_HOME/bin:$PATH"
+  export ANDROID_HOME="$ANDROID_SDK"
+  export ANDROID_SDK_ROOT="$ANDROID_SDK"
+  export TMPDIR="$TMP_PREBUILD/.gradle-metro-tmp"
+  export TMP="$TMPDIR"
+  export TEMP="$TMPDIR"
+  export NODE_ENV=production
+  ./gradlew :app:processReleaseMainManifest --no-daemon >"$TMP_WORK/gradle-release-manifest.log" 2>&1
+); then
+  echo "ANDROID_RELEASE_MANIFEST_MERGE=FAIL"
+  tail -120 "$TMP_WORK/gradle-release-manifest.log" || true
+  exit 57
+fi
+echo "ANDROID_RELEASE_MANIFEST_MERGE=PASS"
+
+MERGED_MANIFEST="$TMP_PREBUILD/android/app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml"
+if [ ! -f "$MERGED_MANIFEST" ]; then
+  MERGED_MANIFEST="$(find "$TMP_PREBUILD/android/app/build/intermediates" -type f -name AndroidManifest.xml | grep '/release/' | head -1 || true)"
+fi
+if [ -z "$MERGED_MANIFEST" ] || [ ! -f "$MERGED_MANIFEST" ]; then
+  echo "ANDROID_MERGED_MANIFEST=FAIL"
+  exit 56
+fi
+
+python3 - "$MERGED_MANIFEST" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+path = sys.argv[1]
+root = ET.parse(path).getroot()
+ANDROID = "{http://schemas.android.com/apk/res/android}"
+
+active = []
+for el in root.findall("uses-permission"):
+    name = el.attrib.get(ANDROID + "name", "")
+    if name:
+        active.append(name)
+
+required = {
+    "android.permission.CAMERA",
+    "android.permission.USE_BIOMETRIC",
+}
+forbidden = {
+    "android.permission.RECORD_AUDIO",
+    "android.permission.SYSTEM_ALERT_WINDOW",
+    "android.permission.READ_EXTERNAL_STORAGE",
+    "android.permission.WRITE_EXTERNAL_STORAGE",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.READ_CONTACTS",
+    "android.permission.WRITE_CONTACTS",
+    "android.permission.READ_SMS",
+    "android.permission.CALL_PHONE",
+}
+
+missing = sorted(required.difference(active))
+leaked = sorted(forbidden.intersection(active))
+if missing:
+    raise SystemExit("ANDROID_MERGED_REQUIRED_PERMISSION=FAIL " + ",".join(missing))
+if leaked:
+    raise SystemExit("ANDROID_MERGED_FORBIDDEN_PERMISSION=FAIL " + ",".join(leaked))
+
+print("ANDROID_MERGED_REQUIRED_PERMISSIONS=PASS")
+print("ANDROID_MERGED_FORBIDDEN_PERMISSIONS=ABSENT_PASS")
+print("ANDROID_MERGED_ACTIVE_PERMISSIONS=" + ",".join(sorted(active)))
+PY
 
 say "FINAL"
 echo "B11_TREATED_AS_EVIDENCE_NOT_TRUSTED_BASELINE=PASS"

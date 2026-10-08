@@ -169,3 +169,29 @@ The next allowed actions after a final staged-tree rerun are:
 5. make a separate decision before any paid build or Store submission.
 
 No source mutation may be introduced between the final staged-tree gate and commit.
+
+## Hardened Release-manifest gate extension
+
+After the original GREEN seal, the Android evidence requirement was made stricter.
+
+The gate now requires a real Gradle Release manifest merge and parses the effective merged permissions. It also neutralizes the incompatible Foojay 0.5.0 JDK resolver only inside the disposable validation copy, using the already installed JDK 17 instead.
+
+Until the hardened exact-tree rerun returns FINAL_ORCHIDPAY_B12_GATE=PASS, this seal is considered GREEN evidence under active revalidation and does not authorize a paid build or Store mutation.
+
+## Hardened exact-tree revalidation — R3 GREEN
+
+The pending hardened revalidation referenced above has completed.
+
+Result:
+- RC=0;
+- FINAL_ORCHIDPAY_B12_GATE=PASS;
+- packaged iOS/Android B11-signature forensics: PASS;
+- iOS native privacy: PASS;
+- Android source permission directives: PASS;
+- Android Gradle Release manifest merge: PASS;
+- effective required permissions present: PASS;
+- effective forbidden permissions absent: PASS.
+
+This establishes GREEN source-level and locally reproducible Release-manifest evidence for B12.
+
+It still does not authorize a paid build, TestFlight upload, App Store submission, Google Play submission, provider activation or live-payment execution.

@@ -289,3 +289,44 @@ No paid B12 EAS build has been started.
 `DOCUMENT -> FULL GATE -> COMMIT -> PUSH -> PR -> CI/REVIEW -> BUILD DECISION -> SUBMIT DECISION`
 
 Do not skip from source readiness directly to Store submission.
+
+## 18. Android Release-manifest evidence hardening
+
+The B12 gate has been strengthened beyond source-manifest inspection.
+
+It now performs a real Gradle Release manifest merge in the disposable prebuild tree and asserts the effective permission surface.
+
+Validation-lab environment:
+- Android SDK 36;
+- Android build-tools 36.0.0;
+- local OpenJDK 17;
+- isolated Metro temporary cache;
+- no JDK download required.
+
+React Native 0.83.10 includes Foojay resolver 0.5.0 in its Gradle included build. That resolver is incompatible with this Gradle 9.0.0 validation path and throws IBM_SEMERU during remote toolchain resolution. The gate removes the resolver declaration only inside the disposable validation copy after confirming the expected declaration is present. Product source and package metadata are not modified by this workaround.
+
+Required final markers now additionally include:
+- RN_FOOJAY_VALIDATION_LAB_DISABLE=PASS;
+- ANDROID_RELEASE_MANIFEST_MERGE=PASS;
+- ANDROID_MERGED_REQUIRED_PERMISSIONS=PASS;
+- ANDROID_MERGED_FORBIDDEN_PERMISSIONS=ABSENT_PASS.
+
+The effective Release manifest must retain CAMERA and USE_BIOMETRIC while excluding microphone, overlay, external-storage, notification, contacts, SMS and call permissions.
+
+No paid EAS build or Store submission is authorized by this gate extension.
+
+## 19. Hardened exact-tree R3 — PASS
+
+The strengthened one-shot completed on the exact candidate tree with RC=0.
+
+Final markers:
+- FINAL_ORCHIDPAY_B12_GATE=PASS;
+- RN_FOOJAY_VALIDATION_LAB_DISABLE=PASS;
+- ANDROID_RELEASE_MANIFEST_MERGE=PASS;
+- ANDROID_MERGED_REQUIRED_PERMISSIONS=PASS;
+- ANDROID_MERGED_FORBIDDEN_PERMISSIONS=ABSENT_PASS.
+
+The candidate remains source/release-ready only. No paid EAS build or Store submission is authorized by this result.
+
+The next integrity sequence is:
+R3 EVIDENCE -> SHA256 REFRESH -> STAGE -> R4 EXACT-TREE -> COMMIT -> PUSH -> PR/CI -> BUILD DECISION.

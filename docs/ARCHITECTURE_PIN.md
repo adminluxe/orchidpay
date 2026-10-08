@@ -260,3 +260,25 @@ A source-level PASS does **not** authorize:
 Promotion sequence:
 
 `DOCUMENT -> FULL GATE -> COMMIT -> PUSH -> PR -> CI/REVIEW -> BUILD DECISION -> SUBMIT DECISION`
+
+## B12 validation-lab invariant — 2026-10-08
+
+Store source and validation tooling are deliberately separated.
+
+The tracked product keeps the supported Expo 55 / React Native 0.83.10 dependency graph.
+
+For local Android Release-manifest verification, the disposable prebuild:
+- uses Android SDK 36 and build-tools 36.0.0;
+- uses local JDK 17;
+- disables the Foojay 0.5.0 resolver only in the temporary React Native Gradle-plugin copy;
+- isolates Metro temporary state;
+- merges the Release manifest with Gradle;
+- asserts effective permissions after manifest merging.
+
+This validation-only compatibility step must never be confused with a production-source patch.
+
+### B12 exact-tree R3 status
+
+The validation-lab invariant above has now been exercised successfully by the hardened exact-tree R3 gate.
+
+FINAL_ORCHIDPAY_B12_GATE=PASS with effective Android Release-manifest assertions is the minimum source-readiness evidence required before any future B12 build decision.

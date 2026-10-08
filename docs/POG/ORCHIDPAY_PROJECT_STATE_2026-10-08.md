@@ -146,3 +146,24 @@ Next safe sequence:
 7. open PR;
 8. require CI/review;
 9. only then make a separate paid-build / submission decision.
+
+## Android merged Release evidence
+
+The release-readiness proof now includes an effective Gradle Release manifest merge, not only prebuild source directives.
+
+The validation copy uses local JDK 17 and Android SDK 36. Foojay resolver 0.5.0 is disabled only inside that disposable copy because its Gradle 9 IBM_SEMERU failure concerns JDK provisioning rather than OrchidPay application behavior.
+
+Store submission remains unauthorized until the hardened full gate passes on the final candidate tree.
+
+## B12 hardened R3 checkpoint
+
+The corrective B12 candidate has now passed the hardened exact-tree source/release gate with RC=0, including effective Android Release-manifest permission assertions.
+
+This is a source/readiness milestone only:
+- no paid EAS build;
+- no TestFlight upload;
+- no App Store or Google Play submission;
+- no provider activation;
+- no live-payment claim.
+
+The evidence remains non-production until the branch is sealed through final R4, commit/push and PR/CI/review.
