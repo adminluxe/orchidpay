@@ -8,7 +8,7 @@ export const mockTransactions = [
 export const walletSnapshot = {
   balance: '12 450,75 XAF',
   fiat: '≈ 18,98 USD',
-  accountName: 'Afripay',
-  publicAlias: '@afripay',
+  accountName: 'Raoul F.',
+  publicAlias: '@raoulf',
   maskedAccount: 'OP •••• 2874',
 };

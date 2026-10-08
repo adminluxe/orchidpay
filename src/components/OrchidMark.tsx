@@ -1,69 +1,34 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { colors } from '../theme';
+import { Image, StyleSheet, View } from 'react-native';
 
-type OrchidMarkProps = {
-  size?: number;
-};
+const PREMIUM_MARK = require('../../assets/in-app-mark.png');
+const GOLDEN_RADIUS_FACTOR = 0.236;
 
-export default function OrchidMark({ size = 44 }: OrchidMarkProps) {
-  const petal = size * 0.34;
-  const core = size * 0.13;
+export default function OrchidMark({ size = 44 }: { size?: number }) {
+  const radius = Math.max(12, Math.round(size * GOLDEN_RADIUS_FACTOR));
 
   return (
-    <View style={[styles.wrap, { width: size, height: size }]}>
-      <View
+    <View
+      accessibilityRole="image"
+      accessibilityLabel="OrchidPay"
+      style={[
+        styles.shell,
+        {
+          width: size,
+          height: size,
+          borderRadius: radius,
+        },
+      ]}
+    >
+      <Image
+        source={PREMIUM_MARK}
+        resizeMode="cover"
         style={[
-          styles.ring,
+          styles.image,
           {
             width: size,
             height: size,
-            borderRadius: size / 2,
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.petal,
-          styles.top,
-          { width: petal, height: petal * 1.12, borderRadius: petal },
-        ]}
-      />
-      <View
-        style={[
-          styles.petal,
-          styles.left,
-          { width: petal, height: petal * 1.12, borderRadius: petal },
-        ]}
-      />
-      <View
-        style={[
-          styles.petal,
-          styles.right,
-          { width: petal, height: petal * 1.12, borderRadius: petal },
-        ]}
-      />
-      <View
-        style={[
-          styles.lowerPetal,
-          styles.lowerLeft,
-          { width: petal * 0.86, height: petal, borderRadius: petal },
-        ]}
-      />
-      <View
-        style={[
-          styles.lowerPetal,
-          styles.lowerRight,
-          { width: petal * 0.86, height: petal, borderRadius: petal },
-        ]}
-      />
-      <View
-        style={[
-          styles.core,
-          {
-            width: core,
-            height: core,
-            borderRadius: core / 2,
+            borderRadius: radius,
           },
         ]}
       />
@@ -72,55 +37,17 @@ export default function OrchidMark({ size = 44 }: OrchidMarkProps) {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  shell: {
+    backgroundColor: '#0A0612',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 215, 106, 0.52)',
+    shadowColor: '#8A3FFC',
+    shadowOpacity: 0.34,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 7,
   },
-  ring: {
-    position: 'absolute',
-    borderWidth: 1.2,
-    borderColor: 'rgba(240,185,11,0.55)',
-  },
-  petal: {
-    position: 'absolute',
-    backgroundColor: colors.purple,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  lowerPetal: {
-    position: 'absolute',
-    backgroundColor: colors.purpleStrong,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  top: {
-    top: '9%',
-    transform: [{ rotate: '0deg' }],
-  },
-  left: {
-    left: '14%',
-    top: '31%',
-    transform: [{ rotate: '-48deg' }],
-  },
-  right: {
-    right: '14%',
-    top: '31%',
-    transform: [{ rotate: '48deg' }],
-  },
-  lowerLeft: {
-    left: '25%',
-    bottom: '14%',
-    transform: [{ rotate: '-28deg' }],
-  },
-  lowerRight: {
-    right: '25%',
-    bottom: '14%',
-    transform: [{ rotate: '28deg' }],
-  },
-  core: {
-    position: 'absolute',
-    backgroundColor: colors.gold,
-    borderWidth: 1,
-    borderColor: colors.goldSoft,
+  image: {
+    backgroundColor: '#0A0612',
   },
 });

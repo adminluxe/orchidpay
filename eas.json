@@ -24,5 +24,12 @@
         "ORCHIDPAY_APP_ATTEST_ENVIRONMENT": "production"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6808431270"
+      }
+    }
   }
 }

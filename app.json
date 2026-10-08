@@ -15,21 +15,27 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.delishafrica.orchidpaymobile",
-      "buildNumber": "2",
+      "buildNumber": "12",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "OrchidPay utilise Face ID pour protéger votre session et confirmer les opérations sensibles."
       },
-      "runtimeVersion": "1.0.0-r12-ios-native-security-v1"
+      "runtimeVersion": "1.0.0-public-ready-b12-premium-brand-v1"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#09051A"
       },
-      "package": "com.delishafrica.orchidpaymobile"
+      "package": "com.delishafrica.orchidpaymobile",
+      "versionCode": 12,
+      "icon": "./assets/icon.png",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -27,7 +27,7 @@ export function validatePaymentDraft(draft: PaymentDraft): PaymentValidation {
   }
 
   if (amount > MAX_DEMO_XAF) {
-    return { ok: false, code: 'limit', message: 'La limite de démonstration est fixée à 500 000 XAF.' };
+    return { ok: false, code: 'limit', message: 'La limite locale de prévalidation est fixée à 500 000 XAF.' };
   }
 
   return {

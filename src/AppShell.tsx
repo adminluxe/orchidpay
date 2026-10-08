@@ -2,17 +2,22 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import BottomNav from './components/BottomNav';
 import HomeScreen from './screens/HomeScreen';
-import SendScreen from './screens/SendScreen';
-import ReceiveScreen from './screens/ReceiveScreen';
-import DepositScreen from './screens/DepositScreen';
 import SecurityScreen from './screens/SecurityScreen';
-import { ActivityScreen, CardsScreen, ProfileScreen, ScanScreen } from './screens/TabScreens';
+import { ActivityScreen, ProfileScreen } from './screens/TabScreens';
+import {
+  AuthorizedDevicesScreen,
+  ComplianceScreen,
+  HelpCenterScreen,
+  LimitsSecurityScreen,
+} from './screens/ProfileDetailScreens';
+import ScanScreen from './screens/ScanScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 import { SessionProvider, useSession } from './security/SessionContext';
 import LockScreen from './security/LockScreen';
 import type { AppRoute, Navigate, TabRoute } from './types';
 import { colors } from './theme';
 
-const tabRoutes: TabRoute[] = ['home', 'cards', 'scan', 'activity', 'profile'];
+const tabRoutes: TabRoute[] = ['home', 'scan', 'activity', 'profile'];
 
 function AppRouter() {
   const session = useSession();
@@ -32,14 +37,15 @@ function AppRouter() {
 
   const content = (() => {
     switch (route) {
-      case 'send': return <SendScreen navigate={navigate} />;
-      case 'receive': return <ReceiveScreen navigate={navigate} />;
-      case 'deposit': return <DepositScreen navigate={navigate} />;
       case 'security': return <SecurityScreen navigate={navigate} />;
-      case 'cards': return <CardsScreen />;
+      case 'authorized-devices': return <AuthorizedDevicesScreen navigate={navigate} />;
+      case 'limits-security': return <LimitsSecurityScreen navigate={navigate} />;
+      case 'compliance': return <ComplianceScreen navigate={navigate} />;
+      case 'help': return <HelpCenterScreen navigate={navigate} />;
+      case 'notifications': return <NotificationsScreen navigate={navigate} />;
       case 'scan': return <ScanScreen />;
       case 'activity': return <ActivityScreen />;
-      case 'profile': return <ProfileScreen />;
+      case 'profile': return <ProfileScreen navigate={navigate} />;
       case 'home':
       default: return <HomeScreen navigate={navigate} />;
     }
