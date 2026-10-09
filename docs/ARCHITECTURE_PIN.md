@@ -318,3 +318,23 @@ A future B12 build decision requires all of the following on the final tracked t
 - `FINAL_ORCHIDPAY_B12_GATE=PASS`.
 
 R5 does not authorize payment execution or Store submission.
+
+## Apple 2026-10-09 — App Store surface / metadata boundary
+
+iOS `1.0.0 (12)` is REJECTED under 2.3.1(a), not released. Previous B12 green technical gates do NOT equal App Store compliance.
+
+Canonical distributed route surface (source `src/AppShell.tsx`):
+- `home`, `scan`, `activity`, `profile`;
+- `security`, `authorized-devices`, `limits-security`, `compliance`, `help`, `notifications`.
+- QR camera **reads and displays content only**; it does not validate the payee, process a transfer or call a payment API.
+- Activity shows **local security events**, not financial transaction records.
+- No user-facing live wallet balances, virtual card issuance, deposits, money transfer or settlement are represented as enabled.
+- Internal financial engineering modules remain outside the route graph; a source-only scan is insufficient to prove absent compiled behavior.
+
+Current ASC metadata, however, promises financial balance overview, account activity, cards and send/receive/deposit features, while website `www.orchidpay.online` presents a private payment pilot. This mismatch is a credible primary cause of Apple rejection.
+
+**Hard release boundary:** The App Store listing, screenshots, notes, public website, binary, real end-user product, and any OTA channel must describe/deliver the SAME functionality. Undisclosed financial features must not be reactivated post-review. Regulated banking services require their own legal/provider compliance review.
+
+**Before any resubmission:** Confirm product scope + meaningful 4.2 utility, remediate the documentary discrepancy, request App Review reproduction details, inspect actual b12 IPA/runtime, do review-device QA. Treat the B12 submission as rejected, not as a releasable baseline.
+
+No changes to product code, EAS, Apple metadata or Stores have been made during this documentation update.

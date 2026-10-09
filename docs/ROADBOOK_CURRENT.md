@@ -1,9 +1,13 @@
 # OrchidPay — Roadbook Current
 
-**Current checkpoint:** 2026-10-08
+**Current checkpoint:** 2026-10-09 — iOS 1.0.0 (12) rejected under 2.3.1(a); remediation HOLD
 **Current candidate:** B12 R5 Cloud Build Hardened Candidate
 **Canonical repo:** `adminluxe/orchidpay`
 **Protected base:** `main`
+
+**LATEST RELEASE WARNING:** iOS build 12 was actually built and submitted on 2026-10-09, then REJECTED by Apple. Prior 2026-10-08 statements that the build had not been submitted are historical checkpoints, NOT current authorization or Store state. Do not resubmit or enable financial features without a reviewed correction.
+
+
 
 ## Authoritative records
 
@@ -108,3 +112,30 @@ R5 supersedes the R4 validation-only Foojay workaround for future Android cloud-
 A disposable EAS-order lab, the pre-documentation gate and the R5 stage-1 staged exact-tree gate all passed, including the real Release-manifest merge. The R5 evidence seal/checksums are generated from that RC=0 result. A second full gate is mandatory at the commit boundary; the seal is void if that final gate is not RC=0 or if any file changes afterward.
 
 Paid build and Store submission remain HOLD.
+
+
+### 2026-10-09 — App Review 2.3.1(a) refusal and recovery
+
+**Store truth:** App Store Connect shows OrchidPay iOS 1.0 (build 12) **REJECTED**, reported on 2026-10-09 at 18:51, Guideline 2.3.1(a) (inaccurate metadata / hidden or undocumented financial functionality). The reviewer cited balances, virtual cards and money-transfer flows and an Extended Review warning. Repeated unresolved submissions risk further action.
+
+**Strongly corroborated metadata inconsistency:** ASC English description/promotion currently advertised dashboard and balance overview, account history, send/receive/deposit, cards, and phased financial availability. The current `AppShell.tsx` Store router makes only `home`, `scan`, `activity`, `profile`, and local security/support/privacy screens accessible. B11 engineering-only financial routes are not imported by that Store router.
+
+**IPA validation:** The exact submitted B12 IPA was retrieved as a valid ZIP. Its Hermes bundle does not contain the historical B11 financial identity signatures, or plaintext `wallet`, `balance`, `banking`, `payment` and `deposit` strings. This is limited static evidence, **not proof that the binary contains no dormant financial behavior**.
+
+**Website:** The publicly served `www.orchidpay.online` still references a private payment pilot, balances, cards, transfers and demonstration. The application, Store listing, and public website must be reconciled. App Review notes did not explicitly discuss the financial features promised by the listing.
+
+**Release HOLD and surgical next actions:**
+- Freeze submission and paid build changes while exact finding is clarified;
+- Request from Apple reproduction steps/screenshots if reviewers reached an unexpected screen;
+- Choose an honest product scope: useful security utility with truthful metadata, or genuinely functional/legally authorized financial service;
+- Align description, promo, keywords, screenshots, notes, legal site, category, and binary with that product;
+- Assess Apple 2.2 (demonstration), 2.3.1(a), 4.2 (minimum utility), and financial-regulation provisions if relevant;
+- No concealment or feature toggles after review, no OTA unlocking banking functionality;
+- Re-evaluate iPhone/iPad and bundled executable before deciding whether metadata-only correction or new build is required.
+
+**Actions completed:** forensic audit and documentation draft only, no ASC metadata mutation, no reply sent, no rebuild, no resubmission.
+
+**Source of truth / full private remediation drafts on Toshiba:**
+`/home/tontoncestcarre/Téléchargements/ORCHIDPAY_APPLE_231_AUDIT_20261009/`
+
+**Developer program maintenance:** Check Apple Developer Program membership renewal due 2026-10-24.
