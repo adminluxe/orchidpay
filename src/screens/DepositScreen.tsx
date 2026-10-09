@@ -1,34 +1,41 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
 import type { Navigate } from '../types';
-
-const channels = [
-  { title: 'Virement bancaire', meta: 'IBAN / compte de cantonnement · bientôt' },
-  { title: 'Mobile Money', meta: 'Connecteurs opérateurs · bientôt' },
-  { title: 'Carte bancaire', meta: 'PSP tokenisé · bientôt' },
-];
+import { depositChannels, surfacePolicy } from '../security/surfacePolicy';
 
 export default function DepositScreen({ navigate }: { navigate: Navigate }) {
+  const explainChannel = (title: string) => {
+    Alert.alert(
+      `${title} · non activé`,
+      'Cette tranche n’exécute aucun dépôt. Aucun navigateur, PSP, opérateur Mobile Money ni endpoint bancaire n’est appelé.',
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.page}>
         <TouchableOpacity onPress={() => navigate('home')}><Text style={styles.back}>‹ Accueil</Text></TouchableOpacity>
         <Text style={styles.eyebrow}>ALIMENTER</Text>
         <Text style={styles.title}>Déposer des fonds</Text>
-        <Text style={styles.subtitle}>Choisissez un canal. Aucun dépôt réel n’est activé dans la V1.</Text>
+        <Text style={styles.subtitle}>Les canaux sont visibles pour préparer l’UX, mais restent explicitement non exécutables.</Text>
 
         <View style={styles.stack}>
-          {channels.map((channel, index) => (
-            <TouchableOpacity key={channel.title} style={styles.channel} activeOpacity={0.85}>
+          {depositChannels.map((channel, index) => (
+            <TouchableOpacity key={channel.id} style={styles.channel} activeOpacity={0.85} onPress={() => explainChannel(channel.title)}>
               <View style={styles.index}><Text style={styles.indexText}>{index + 1}</Text></View>
-              <View style={styles.copy}><Text style={styles.channelTitle}>{channel.title}</Text><Text style={styles.channelMeta}>{channel.meta}</Text></View>
+              <View style={styles.copy}>
+                <Text style={styles.channelTitle}>{channel.title}</Text>
+                <Text style={styles.channelMeta}>{channel.meta}</Text>
+                <Text style={styles.offline}>INACTIF · LOCAL UNIQUEMENT</Text>
+              </View>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.guard}><Text style={styles.guardTitle}>Séparation des responsabilités</Text><Text style={styles.guardText}>L’application ne stockera jamais de données carte brutes. Les futurs dépôts seront délégués à des prestataires tokenisés et à des endpoints signés.</Text></View>
+        <View style={styles.guard}><Text style={styles.guardTitle}>Séparation des responsabilités</Text><Text style={styles.guardText}>Exécution dépôt : {surfacePolicy.depositExecutionEnabled ? 'ON' : 'OFF'}. L’application ne stocke aucune donnée carte brute. Les futurs dépôts devront être délégués à des prestataires tokenisés et à des endpoints signés.</Text></View>
       </View>
     </SafeAreaView>
   );
@@ -48,6 +55,7 @@ const styles = StyleSheet.create({
   copy: { flex: 1, marginLeft: spacing.md },
   channelTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
   channelMeta: { color: colors.textMuted, fontSize: 11, marginTop: 4 },
+  offline: { color: colors.warning, fontSize: 9, fontWeight: '900', marginTop: 5, letterSpacing: 0.5 },
   chevron: { color: colors.purpleSoft, fontSize: 26 },
   guard: { marginTop: spacing.xl, padding: spacing.md, borderRadius: radius.md, backgroundColor: '#0E1512', borderWidth: 1, borderColor: '#1C3929' },
   guardTitle: { color: colors.success, fontWeight: '900' },

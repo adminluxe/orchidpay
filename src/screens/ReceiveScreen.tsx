@@ -1,17 +1,27 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
 import type { Navigate } from '../types';
 import { walletSnapshot } from '../data/mock';
+import { buildReceiveSharePayload, surfacePolicy } from '../security/surfacePolicy';
 
 export default function ReceiveScreen({ navigate }: { navigate: Navigate }) {
+  const shareAlias = async () => {
+    try {
+      await Share.share({ message: buildReceiveSharePayload(walletSnapshot.publicAlias, walletSnapshot.maskedAccount) });
+    } catch {
+      Alert.alert('Partage indisponible', 'Aucun payload de paiement n’a été créé. Vous pouvez revenir à l’accueil sans risque.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.page}>
         <TouchableOpacity onPress={() => navigate('home')}><Text style={styles.back}>‹ Accueil</Text></TouchableOpacity>
         <Text style={styles.eyebrow}>RECEVOIR</Text>
         <Text style={styles.title}>Votre identifiant OrchidPay</Text>
-        <Text style={styles.subtitle}>Partagez cet alias pour préparer une réception de fonds.</Text>
+        <Text style={styles.subtitle}>Partagez uniquement votre alias public. Aucun montant ni ordre de paiement n’est encodé dans cette tranche.</Text>
 
         <View style={styles.qrCard}>
           <View style={styles.qrMock}>
@@ -19,11 +29,16 @@ export default function ReceiveScreen({ navigate }: { navigate: Navigate }) {
           </View>
           <Text style={styles.alias}>{walletSnapshot.publicAlias}</Text>
           <Text style={styles.account}>{walletSnapshot.maskedAccount}</Text>
+          <Text style={styles.qrState}>APERÇU VISUEL · NON EXÉCUTABLE</Text>
         </View>
 
+        <TouchableOpacity style={styles.primary} onPress={shareAlias} activeOpacity={0.85}>
+          <Text style={styles.primaryText}>Partager l’alias public</Text>
+        </TouchableOpacity>
+
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>Réception mock</Text>
-          <Text style={styles.noticeText}>Le QR est volontairement non-exécutable dans cette tranche. Le payload signé sera généré côté backend avant activation.</Text>
+          <Text style={styles.noticeTitle}>Réception fail-closed</Text>
+          <Text style={styles.noticeText}>Le QR reste volontairement non exécutable ({surfacePolicy.receiveQrExecutable ? 'ON' : 'OFF'}). Le partage iOS contient seulement l’alias et le compte masqué, sans URL, montant ni instruction de débit.</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -43,6 +58,9 @@ const styles = StyleSheet.create({
   pixelOn: { backgroundColor: '#111111' },
   alias: { color: colors.text, fontSize: 22, fontWeight: '900', marginTop: spacing.lg },
   account: { color: colors.textMuted, marginTop: 5 },
+  qrState: { color: colors.warning, fontSize: 10, fontWeight: '900', marginTop: spacing.sm, letterSpacing: 0.7 },
+  primary: { marginTop: spacing.lg, backgroundColor: colors.purple, borderRadius: radius.md, alignItems: 'center', paddingVertical: 15 },
+  primaryText: { color: colors.white, fontWeight: '900' },
   notice: { marginTop: spacing.lg, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.inkSoft, borderWidth: 1, borderColor: colors.panelBorder },
   noticeTitle: { color: colors.purpleSoft, fontWeight: '900' },
   noticeText: { color: colors.textMuted, lineHeight: 18, marginTop: 6, fontSize: 12 },

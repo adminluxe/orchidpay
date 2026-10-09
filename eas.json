@@ -22,6 +22,16 @@
       "node": "20.19.4",
       "env": {
         "ORCHIDPAY_APP_ATTEST_ENVIRONMENT": "production"
+      },
+      "android": {
+        "image": "sdk-55"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6808431270"
       }
     }
   }

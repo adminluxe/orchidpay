@@ -5,8 +5,7 @@ import type { Navigate, TabRoute } from '../types';
 
 const tabs: Array<{ route: TabRoute; label: string; symbol: string }> = [
   { route: 'home', label: 'Accueil', symbol: '⌂' },
-  { route: 'cards', label: 'Cartes', symbol: '▣' },
-  { route: 'scan', label: 'Scan', symbol: '⌁' },
+  { route: 'scan', label: 'Vérifier', symbol: '⌁' },
   { route: 'activity', label: 'Activité', symbol: '↺' },
   { route: 'profile', label: 'Profil', symbol: '○' },
 ];
