@@ -9,6 +9,12 @@
 
 
 
+## Mise à jour 12 octobre — alignement site en QA isolée
+
+Un deuxième worktree isolé suit les métadonnées canoniques du commit `4cccc5d` et corrige les sources complètes de `site/index.html`, `site/support/index.html`, `site/terms/index.html`, `site/privacy/index.html`, `site/privacy-choices/index.html`, `site/legal/index.html`. Les pages décrivent uniquement le parcours B12 Accueil/Sécurité/Vérifier un QR/Activité/Profil ; elles séparent explicitement toute éventuelle ambition financière future. Le test `scripts/orchidpay_apple231_site_gate.py` vérifie la cohérence avec le pack App Store existant et les liens statiques.
+
+**Source de vérité :** textes App Store `docs/ORCHIDPAY_APPSTORE_COPY_B12_EN_FR_2026-10-12.json` ; passation du site `docs/ORCHIDPAY_SITE_231_ALIGNMENT_2026-10-12.md`. Toutes les corrections restent **NON PUBLIÉES** ; ni App Store Connect, ni Vercel production, ni binaire B12 n'ont été touchés. Une anomalie potentielle des statuts de sécurité hardcodés sur Home doit être testée sur appareil. Apple poursuit sa revue, **pas de nouvelle soumission**.
+
 ## Authoritative records
 
 1. Architecture:
@@ -34,7 +40,7 @@
 
 ## Current truth
 
-- next iOS build: **12**
+- submitted iOS build: **12** (9 October); any later replacement needs a new, higher build number **and explicit approval**
 - next Android versionCode: **12**
 - B11: **evidence source / not trusted baseline**
 - B11 IPA forensic defects: **confirmed**
@@ -55,7 +61,7 @@
 - R5 pre-documentation full gate: **PASS**
 - R5 staged exact-tree gate: **PASS (RC=0)**
 - R5 commit-boundary gate: **PASS (RC=0)**; one final sealed-tree no-mutation rerun is required immediately before commit
-- B12 paid build / Store submit: **NOT AUTHORIZED / NOT PERFORMED**
+- B12 was actually submitted on **9 October**; any new paid build, resubmission or Store action is **NOT AUTHORIZED**
 
 ## Promotion sequence
 

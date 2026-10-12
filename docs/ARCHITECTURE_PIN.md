@@ -348,3 +348,9 @@ Store text authority: `docs/ORCHIDPAY_APPSTORE_COPY_B12_EN_FR_2026-10-12.json` (
 **Do not conflate** Store marketing, deployed website and future planned fintech modules. Marketing must neither promise dormant banking functions nor conceal any executable function. Published `www.orchidpay.online` was still out of sync on 12 Oct; a separate website remediation is in progress and must receive its own source QA + approval before publication.
 
 **Apple has acknowledged the 2.3.1(a) response and continues review.** No subsequent submission, review cancellation, EAS build, deployment, Store metadata write or production financial feature activation is authorized here. Apple's 4.2 review and real-device tests are not satisfied by wording changes.
+
+### Site statique synchronisé avec les métadonnées App Store — QA non déployée
+
+La branche `feat/orchidpay-apple231-site-alignment-20261012` ajoute les six pages HTML complètes correspondant au périmètre iOS B12 (session, sécurité, journal local, contenu QR uniquement). L'architecture financière future est décrite **séparément** et jamais comme une capacité disponible. Le contrôle `scripts/orchidpay_apple231_site_gate.py` compare la copie publique à `docs/ORCHIDPAY_APPSTORE_COPY_B12_EN_FR_2026-10-12.json`, vérifie les URLs locales et confirme statiquement l'absence de routes SEND/RECEIVE/DEPOSIT/CARDS dans `AppShell`.
+
+**Boundary immuable :** aucun bouton de paiement réel, aucune activation différée de fonctionnalités financières après Apple Review, aucun site production ou ASC changé. Tests sur l'IPA exacte, screenshots réels et audit des statuts Home hardcodés sont requis avant toute décision B13 / Store. Détails : `docs/ORCHIDPAY_SITE_231_ALIGNMENT_2026-10-12.md`.
