@@ -7,26 +7,32 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
       - run: npm ci
       - run: npm test
 
   publish-gpr:
+    # Fail closed: a GitHub release alone never authorizes publishing a package.
+    # Enable only after an explicit approved release gate for OrchidPay.
+    if: ${{ vars.ORCHIDPAY_GITHUB_PACKAGES_RELEASE_ENABLED == 'true' && github.event.release.prerelease == false }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
           registry-url: https://npm.pkg.github.com/
