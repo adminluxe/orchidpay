@@ -61,6 +61,9 @@ jobs:
           report('NPM_AUDIT_OMIT_DEV', '/tmp/npm-audit-prod.json');
           NODE
 
+      - name: Fail on high or critical production dependency risks
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Dependency provenance evidence
         shell: bash
         run: |
