@@ -338,3 +338,13 @@ Current ASC metadata, however, promises financial balance overview, account acti
 **Before any resubmission:** Confirm product scope + meaningful 4.2 utility, remediate the documentary discrepancy, request App Review reproduction details, inspect actual b12 IPA/runtime, do review-device QA. Treat the B12 submission as rejected, not as a releasable baseline.
 
 No changes to product code, EAS, Apple metadata or Stores have been made during this documentation update.
+
+## Apple 2026-10-12 — Store copy and public website consistency (QA-only)
+
+The B12 binary under review exposes local session/security status, local audit events, and QR-content inspection only. The QR preview is truncated to a readable excerpt (180 displayed characters); it does not verify payees, external links or funds. UI is French. Accounts, balances, cards, deposits, money transfers and settlements are **NOT** part of its accessible user navigation.
+
+Store text authority: `docs/ORCHIDPAY_APPSTORE_COPY_B12_EN_FR_2026-10-12.json` (EN-US first; FR-FR is only a future localization candidate); `scripts/orchidpay_apple231_copy_gate.py` enforces Apple field limits and source-routing assertions. `docs/ORCHIDPAY_APPSTORE_READY_TO_PASTE_B12_2026-10-12.md` is a generated, human-readable complete replacement set.
+
+**Do not conflate** Store marketing, deployed website and future planned fintech modules. Marketing must neither promise dormant banking functions nor conceal any executable function. Published `www.orchidpay.online` was still out of sync on 12 Oct; a separate website remediation is in progress and must receive its own source QA + approval before publication.
+
+**Apple has acknowledged the 2.3.1(a) response and continues review.** No subsequent submission, review cancellation, EAS build, deployment, Store metadata write or production financial feature activation is authorized here. Apple's 4.2 review and real-device tests are not satisfied by wording changes.

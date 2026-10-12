@@ -1,6 +1,6 @@
 # OrchidPay — Roadbook Current
 
-**Current checkpoint:** 2026-10-09 — iOS 1.0.0 (12) rejected under 2.3.1(a); remediation HOLD
+**Current checkpoint:** 2026-10-12 — Apple acknowledged our 2.3.1(a) reply and continues reviewing; metadata copy QA prepared, release HOLD
 **Current candidate:** B12 R5 Cloud Build Hardened Candidate
 **Canonical repo:** `adminluxe/orchidpay`
 **Protected base:** `main`
@@ -139,3 +139,19 @@ Paid build and Store submission remain HOLD.
 `/home/tontoncestcarre/Téléchargements/ORCHIDPAY_APPLE_231_AUDIT_20261009/`
 
 **Developer program maintenance:** Check Apple Developer Program membership renewal due 2026-10-24.
+
+### 2026-10-12 — Apple continues review; truthful Store metadata prepared
+
+- **New Apple response (12 Oct, around 21:48 local):** “Thank you for providing this information. We will continue the review, and we will notify you if there are any further issues.” This is **not acceptance**, nor a request to rebuild.
+- Earlier 09 Oct audit paragraphs remain historical facts. The user confirms that the initial clarification message was **actually sent**; the prior draft status is superseded as to that reply, but **the corrected metadata is NOT yet applied**.
+- Source B12 routes inspected again: Accueil/Home, Vérifier un QR/Scan, Activité/Activity, Profil/Profile; local session and security screens, on-device QR preview only.
+- Drafted complete EN-US and FR-FR App Store name/subtitle/promo/description/keywords with a ready-to-paste package; EN/French length limits and App Review Notes bytes checked offline by `scripts/orchidpay_apple231_copy_gate.py`.
+- Apple notes in English explicitly cite the app's **French** navigation labels and no financial activity.
+- `www.orchidpay.online` (12 Oct, read-only) still publicly describes SEND/RECEIVE, demo balances and financial pilot. The legal/support pages must be aligned and then deployed only after source QA + explicit approval; another local audit worktree has parallel work in progress and MUST NOT be overwritten.
+- No App Store Connect API write, screenshot replacement, site deploy, OTA, EAS build, resubmission or store release has occurred **in this metadata worktree**.
+- iOS 1.0.0 (12) remains subject to open review; reconcile its precise live ASC state and screenshots before choosing any permitted metadata action.
+- Apple 2.3.1(a) documentation alignment is necessary but **insufficient** for 4.2 minimum utility. Real on-device functional review and screenshot verification remain release blockers.
+
+**Artifacts:** `docs/ORCHIDPAY_APPSTORE_COPY_B12_EN_FR_2026-10-12.json`, `docs/ORCHIDPAY_APPSTORE_READY_TO_PASTE_B12_2026-10-12.md`, `docs/ORCHIDPAY_APPLE_REVIEW_REPLY_HOLD_2026-10-12.md`.
+
+**HOLD:** Do not withdraw ongoing Apple review, claim approval, deploy website, reuse the same build for a new submission, spend on EAS or enable finance without explicit certification and approval.
