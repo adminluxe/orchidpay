@@ -6,9 +6,9 @@ import { colors, radius, spacing } from '../theme';
 import type { Navigate } from '../types';
 
 const actions = [
-  { label: 'Sécurité', detail: 'Protection de l’appareil', symbol: '◈', route: 'security' as const },
-  { label: 'Vérifier un QR', detail: 'Lecture sans action automatique', symbol: '⌁', route: 'scan' as const },
-  { label: 'Activité', detail: 'Journal de sécurité local', symbol: '↺', route: 'activity' as const },
+  { label: 'Sécurité', detail: 'État de la session et de l’appareil', symbol: '◈', route: 'security' as const },
+  { label: 'Lire un QR', detail: 'Lecture locale, sans paiement', symbol: '⌁', route: 'scan' as const },
+  { label: 'Activité', detail: 'Événements de session locaux', symbol: '↺', route: 'activity' as const },
   { label: 'Aide', detail: 'Réglages & confidentialité', symbol: '?', route: 'help' as const },
 ];
 
@@ -49,24 +49,24 @@ export default function HomeScreen({ navigate }: { navigate: Navigate }) {
         <View style={styles.hero}>
           <View style={styles.heroOrb} />
           <View style={styles.heroGlow} />
-          <Text style={styles.heroEyebrow}>ESPACE PRIVÉ · PROTÉGÉ</Text>
-          <Text style={styles.heroTitle}>Votre espace OrchidPay, <Text style={styles.heroAccent}>sécurisé par design.</Text></Text>
+          <Text style={styles.heroEyebrow}>OUTILS LOCAUX · SANS PAIEMENT</Text>
+          <Text style={styles.heroTitle}>Comprendre et contrôler <Text style={styles.heroAccent}>votre session.</Text></Text>
           <Text style={styles.heroText}>
-            Biométrie forte, stockage sécurisé et verrouillage automatique protègent les actions sensibles sur cet appareil.
+            Consultez les capacités biométriques, les options de verrouillage et le journal local. Les protections disponibles dépendent de votre appareil.
           </Text>
 
           <View style={styles.statusRail}>
             <View style={styles.statusCell}>
-              <Text style={styles.statusLabel}>VAULT</Text>
-              <Text style={styles.statusValue}>PROTÉGÉ</Text>
+              <Text style={styles.statusLabel}>OUTILS</Text>
+              <Text style={styles.statusValue}>LOCAUX</Text>
             </View>
             <View style={styles.statusCell}>
               <Text style={styles.statusLabel}>BIOMÉTRIE</Text>
-              <Text style={styles.statusValue}>FORTE</Text>
+              <Text style={styles.statusValue}>SELON APPAREIL</Text>
             </View>
             <View style={styles.statusCell}>
-              <Text style={styles.statusLabel}>CONFIRMATION</Text>
-              <Text style={styles.statusValue}>RENFORCÉE</Text>
+              <Text style={styles.statusLabel}>TRANSFERTS</Text>
+              <Text style={[styles.statusValue, styles.statusCaution]}>DÉSACTIVÉS</Text>
             </View>
           </View>
         </View>
@@ -96,12 +96,12 @@ export default function HomeScreen({ navigate }: { navigate: Navigate }) {
 
         <View style={styles.note}>
           <View style={styles.noteHead}>
-            <Text style={styles.noteEyebrow}>SÉCURITÉ</Text>
-            <Text style={styles.noteState}>ACTIVE</Text>
+            <Text style={styles.noteEyebrow}>PORTÉE DE CETTE VERSION</Text>
+            <Text style={styles.noteState}>LECTURE LOCALE</Text>
           </View>
-          <Text style={styles.noteTitle}>La confirmation forte reste souveraine.</Text>
+          <Text style={styles.noteTitle}>Aucun transfert dans cette version.</Text>
           <Text style={styles.noteText}>
-            OrchidPay ne déclenche aucune opération financière automatiquement. Les fonctions dépendant de services externes restent séparées de cette expérience de protection.
+            Le lecteur QR n’exécute aucune transaction et ne certifie pas un bénéficiaire. Aucun solde bancaire, carte, dépôt, retrait ni transfert de fonds n’est proposé ici.
           </Text>
         </View>
       </ScrollView>
@@ -132,6 +132,7 @@ const styles = StyleSheet.create({
   statusCell: { flex: 1 },
   statusLabel: { color: colors.textMuted, fontSize: 8, fontWeight: '800', letterSpacing: 0.8 },
   statusValue: { color: colors.success, fontSize: 10, fontWeight: '900', marginTop: 4 },
+  statusCaution: { color: colors.warning },
   sectionHead: { marginTop: spacing.xl, marginBottom: spacing.md, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   sectionEyebrow: { color: colors.goldSoft, fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
   sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 4 },
