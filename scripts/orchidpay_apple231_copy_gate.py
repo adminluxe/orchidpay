@@ -52,6 +52,30 @@ assert "readAuditTrail(12)" in activity
 security = (ROOT / "src/screens/SecurityScreen.tsx").read_text(encoding="utf-8")
 assert "60 secondes en arrière-plan" in security
 assert "Le QR" in data["reviewNotesEn"] or "QR" in data["reviewNotesEn"]
+# Release-candidate Home copy is NOT retroactively part of Apple's submitted B12.
+# This tests the next candidate's truthful claims only, without altering B12.
+home = (ROOT / "src/screens/HomeScreen.tsx").read_text(encoding="utf-8")
+for forbidden in (
+    "sécurisé par design.",
+    "Biométrie forte, stockage sécurisé",
+    ">VAULT<",
+    ">PROTÉGÉ<",
+    ">FORTE<",
+    ">RENFORCÉE<",
+    "PAY. SECURE. GROW.",
+):
+    assert forbidden not in home, f"unsupported home claim: {forbidden}"
+for required in (
+    "SELON APPAREIL",
+    "TRANSFERTS",
+    "DÉSACTIVÉS",
+    "Aucun transfert dans cette version.",
+    "Le lecteur QR n’exécute aucune transaction",
+    "Aucun solde bancaire, carte, dépôt, retrait ni transfert",
+):
+    assert required in home, f"missing accurate home scope: {required}"
+print("QA_NEXT_CANDIDATE_HOME_FINANCIAL_TRUTH=PASS")
+print("IOS_B12_SUBMITTED_BINARY=UNCHANGED")
 print("QA_B12_SOURCE_ROUTER_QR_ACTIVITY_LOCK=PASS")
 print("QA_APPSTORE_COPY=READY_FOR_OWNER_REVIEW_ONLY")
 print("ASC_METADATA_EDIT=NOT_PERFORMED")
