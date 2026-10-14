@@ -25,10 +25,10 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: npm ci
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: npx --no-install tsc --noEmit
 
       - name: Dependency audit evidence
         shell: bash
