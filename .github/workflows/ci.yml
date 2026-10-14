@@ -56,6 +56,21 @@ jobs:
           }
           report('NPM_AUDIT_FULL', '/tmp/npm-audit-full.json');
           report('NPM_AUDIT_OMIT_DEV', '/tmp/npm-audit-prod.json');
+          const prod = JSON.parse(fs.readFileSync('/tmp/npm-audit-prod.json', 'utf8'));
+          const counts = prod.metadata?.vulnerabilities;
+          if (!counts || !Number.isInteger(counts.high) ||
+              !Number.isInteger(counts.critical)) {
+            console.error('ORCHIDPAY_P0_AUDIT_GATE=NO_GO_UNVERIFIED_REPORT');
+            process.exitCode = 1;
+          } else if (counts.high > 0 || counts.critical > 0) {
+            console.error(
+              'ORCHIDPAY_P0_AUDIT_GATE=NO_GO_PROD_HIGH_' +
+              counts.high + '_CRITICAL_' + counts.critical
+            );
+            process.exitCode = 1;
+          } else {
+            console.log('ORCHIDPAY_P0_AUDIT_GATE=PASS_ZERO_PROD_HIGH_CRITICAL');
+          }
           NODE
 
       - name: Dependency provenance evidence
