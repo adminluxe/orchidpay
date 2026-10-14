@@ -22,7 +22,7 @@ export default function HomeScreen({ navigate }: { navigate: Navigate }) {
             <OrchidMark size={44} />
             <View style={styles.brandCopy}>
               <Text style={styles.brandName}>OrchidPay</Text>
-              <Text style={styles.brandTagline}>PAY. SECURE. GROW.</Text>
+              <Text style={styles.brandTagline}>LOCAL. CLEAR. CONTROL.</Text>
             </View>
           </View>
           <View style={styles.headerActions}>
