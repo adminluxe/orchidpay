@@ -1,0 +1,39 @@
+name: OrchidPay Apple 2.3.1 factual copy and site gates
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/apple-231-copy-surface-gate.yml'
+      - 'src/screens/HomeScreen.tsx'
+      - 'src/screens/ScanScreen.tsx'
+      - 'src/screens/SecurityScreen.tsx'
+      - 'src/screens/TabScreens.tsx'
+      - 'src/AppShell.tsx'
+      - 'site/**'
+      - 'docs/ORCHIDPAY_APPSTORE_COPY_B12_EN_FR_2026-10-12.json'
+      - 'scripts/orchidpay_apple231_copy_gate.py'
+      - 'scripts/orchidpay_apple231_site_gate.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  factual-copy:
+    name: Apple 2.3.1 factual source / QR read-only / site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout pinned source without persisted credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify B12 copy boundaries and next-candidate home text
+        run: python3 scripts/orchidpay_apple231_copy_gate.py
+      - name: Verify site links, legal pages and no financial promises
+        run: python3 scripts/orchidpay_apple231_site_gate.py
+      - name: Verify checks did not modify tracked source
+        run: git diff --exit-code
+
+# PASS here is read-only source QA, NOT an Apple release approval.
+# No store submission, site deployment, payment or secrets.
