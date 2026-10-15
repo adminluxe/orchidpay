@@ -1,0 +1,65 @@
+name: OrchidPay B12 isolated Hermes bundle QA
+on:
+  push:
+    branches: [qa/op-p0-hermes-isolated-20261015]
+  pull_request:
+    branches: [security/p0-orchidpay-transitive-remediation-20261015]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orchidpay-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bundle-qa:
+    name: Isolated JS/Hermes QA (not native certification)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout immutable head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Setup Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install reproducibly, without scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Mandatory TypeScript
+        run: npx --no-install tsc --noEmit
+      - name: Adversarial QA self-tests
+        run: node --test scripts/op-p0-qa-export-gate.test.cjs
+      - name: Export Hermes iOS in temporary QA folder
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+          EXPO_OFFLINE: '1'
+        run: npx --no-install expo export --platform ios --output-dir "$RUNNER_TEMP/op-ios"
+      - name: Export Hermes Android in temporary QA folder
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+          EXPO_OFFLINE: '1'
+        run: npx --no-install expo export --platform android --output-dir "$RUNNER_TEMP/op-android"
+      - name: Validate exports and financial OFF-fuses
+        run: node scripts/op-p0-qa-export-gate.cjs "$RUNNER_TEMP/op-ios" "$RUNNER_TEMP/op-android"
+      - name: Declare limits
+        run: |
+          echo 'JS_BUNDLE_QA=PASS'
+          echo 'NATIVE_SIGNING=NOT_TESTED'
+          echo 'DEPENDENCY_AUDIT_21_HIGH=BLOCKED'
+          echo 'LIVE_PAYMENT_SETTLEMENT=OFF'
+          echo 'RELEASE_AUTHORIZATION=NO_GO'
+
