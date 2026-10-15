@@ -1,0 +1,133 @@
+name: OrchidPay self-maintained security forks QA
+
+on:
+  push:
+    branches:
+      - qa/op-p0-self-maintained-forks-20261016
+  pull_request:
+    branches:
+      - qa/op-p0-hermes-isolated-20261015
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: op-self-managed-forks-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  security-fork-verification:
+    name: Fork audit zero, negative control, crypto and mobile JS exports
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable head without credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "TESTED_COMMIT=$EXPECTED_SHA"
+      - name: Setup Node 20.20.2
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Install locked dependencies with no lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify fork tarballs, source, licenses and RSA
+        run: node scripts/security/verify-local-security-forks.cjs
+      - name: Official npm audit full dependency tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --json > "$RUNNER_TEMP/op-full-audit.json"
+          node -e 'const a=require(process.argv[1]);if(a.metadata?.vulnerabilities?.total!==0)process.exit(1);console.log("FULL_AUDIT_COUNTS="+JSON.stringify(a.metadata.vulnerabilities))' "$RUNNER_TEMP/op-full-audit.json"
+      - name: Official npm audit production dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --omit=dev --json > "$RUNNER_TEMP/op-production-audit.json"
+          node -e 'const a=require(process.argv[1]);if(a.metadata?.vulnerabilities?.total!==0)process.exit(1);console.log("PRODUCTION_AUDIT_COUNTS="+JSON.stringify(a.metadata.vulnerabilities))' "$RUNNER_TEMP/op-production-audit.json"
+      - name: Security canary - original vulnerable local tarballs must be detected
+        run: bash scripts/security/verify-audit-negative-control.sh
+      - name: Mandatory TypeScript
+        run: npx --no-install tsc --noEmit
+      - name: Hermes scanner adversarial self-tests
+        run: node --test scripts/op-p0-qa-export-gate.test.cjs
+      - name: Explicit iOS Hermes export
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: npx --no-install expo export --platform ios --output-dir "$RUNNER_TEMP/op-patched-ios"
+      - name: Explicit Android Hermes export
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: npx --no-install expo export --platform android --output-dir "$RUNNER_TEMP/op-patched-android"
+      - name: Test built bundles and financial OFF-fuses
+        run: node scripts/op-p0-qa-export-gate.cjs "$RUNNER_TEMP/op-patched-ios" "$RUNNER_TEMP/op-patched-android"
+      - name: Enforce research-only release boundary
+        run: |
+          echo 'SELF_MAINTAINED_FORK_QA=PASS'
+          echo 'NATIVE_SIGNED_RELEASE=NOT_CERTIFIED'
+          echo 'APP_ATTEST_PLAY_INTEGRITY_PSP=NOT_CERTIFIED'
+          echo 'LIVE_PAYMENTS_SETTLEMENT=OFF'
+          echo 'PRODUCTION_STORE_MERGE=NO_GO'
+
+  verify-built-node-forge-distribution:
+    name: Rebuild node-forge dist from pinned upstream and dev lock
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact security candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Node 20.20.2
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+      - name: Validate pinned builder lock and upstream source SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOCK=vendor/orchidpay-security/node-forge-builder.package-lock.json
+          echo "64a79e9fa88cfd83e9f989333becc05a2b6d5bb0819f5b82a2c152b9484760de  $LOCK" | sha256sum -c -
+          git clone --quiet --depth 1 https://github.com/digitalbazaar/forge.git "$RUNNER_TEMP/nodeforge-src"
+          git -C "$RUNNER_TEMP/nodeforge-src" fetch --quiet --depth 1 origin refs/pull/1152/head
+          test "$(git -C "$RUNNER_TEMP/nodeforge-src" rev-parse FETCH_HEAD)" = ceba34402e329f0365134f23fe19898756527d65
+          git -C "$RUNNER_TEMP/nodeforge-src" checkout --quiet --detach ceba34402e329f0365134f23fe19898756527d65
+          cmp "$RUNNER_TEMP/nodeforge-src/lib/rsa.js" /dev/fd/3 3< <(tar -xOzf vendor/orchidpay-security/node-forge-1.4.1-orchidpay.1.tgz package/lib/rsa.js)
+          cp "$LOCK" "$RUNNER_TEMP/nodeforge-src/package-lock.json"
+          echo 'UPSTREAM_SOURCE_AND_VENDOR_RSA_MATCH=PASS'
+      - name: Restore immutable toolchain lock, no lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/nodeforge-src"
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Rebuild minified distributions and compare exact digests
+        shell: bash
+        env:
+          NODE_OPTIONS: '--openssl-legacy-provider --max-old-space-size=4096'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/nodeforge-src"
+          npm run build
+          echo 'a1d374dddbfd38635e74c08bddcd55553f9b3e29fa4346ff8ac8cbfa2f21414f  dist/forge.min.js' | sha256sum -c -
+          echo 'baaad7f257463658489c2860eb83da1ab6bf6485557a94a8a5a97f935784a1bb  dist/forge.all.min.js' | sha256sum -c -
+          echo '877bd31b0cc79ecb9163649034fbafaeec45e8e2861fc4fa9fb11335f28c4ef9  dist/prime.worker.min.js' | sha256sum -c -
+          echo 'BYTE_IDENTICAL_MINIFIED_FORGE_DIST=PASS'
+      - name: Explicit no-release boundary
+        run: echo 'ISOLATED_BUILDER_ONLY=PASS;PRODUCTION_RELEASE=NO_GO'
+

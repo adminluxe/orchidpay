@@ -18,7 +18,9 @@
     "expo-secure-store": "~55.0.18",
     "react": "19.2.0",
     "react-native": "0.83.10",
-    "react-native-safe-area-context": "~5.6.2"
+    "react-native-safe-area-context": "~5.6.2",
+    "braces": "file:vendor/orchidpay-security/braces-3.0.4-orchidpay.1.tgz",
+    "node-forge": "file:vendor/orchidpay-security/node-forge-1.4.1-orchidpay.1.tgz"
   },
   "private": true,
   "devDependencies": {
@@ -36,6 +38,8 @@
     "shell-quote": "1.11.0",
     "source-map-js": "1.2.2",
     "brace-expansion@^1.0.0": "1.1.21",
-    "brace-expansion@^5.0.0": "5.0.12"
+    "brace-expansion@^5.0.0": "5.0.12",
+    "braces": "$braces",
+    "node-forge": "$node-forge"
   }
 }
