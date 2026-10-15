@@ -95,8 +95,6 @@ jobs:
     needs: static-native
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    env:
-      GRADLE_USER_HOME: ${{ runner.temp }}/orchidpay-gradle-cache
     steps:
       - name: Checkout audited commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -137,6 +135,7 @@ jobs:
         env:
           CI: '1'
           EXPO_NO_TELEMETRY: '1'
+          GRADLE_USER_HOME: ${{ runner.temp }}/orchidpay-gradle-cache
         run: |
           set -euo pipefail
           if test -d "$JAVA_HOME_17_X64"; then export JAVA_HOME="$JAVA_HOME_17_X64"; fi
