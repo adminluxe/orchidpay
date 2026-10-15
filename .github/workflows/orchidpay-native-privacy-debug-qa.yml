@@ -1,0 +1,160 @@
+name: OrchidPay P0 native privacy and Android debug certification
+
+on:
+  push:
+    branches:
+      - qa/op-p0-native-privacy-20261016
+  pull_request:
+    branches:
+      - qa/op-p0-self-maintained-forks-20261016
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orchidpay-p0-native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  static-native:
+    name: iOS/Android pinned prebuild, backup protection, adversarial checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Exact SHA checkout, no stored credential
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify checkout SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Pinned Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Full reproducible npm install without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Pinned security backports integrity
+        run: |
+          node scripts/security/verify-local-security-forks.cjs
+          npm audit --omit=dev --audit-level=high
+      - name: Apply exact RN Gradle 9 Foojay patch in ephemeral runner
+        run: |
+          npm run eas-build-post-install
+          npm run verify:foojay
+      - name: Pack official Expo 55.0.31 native template
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm pack expo-template-bare-minimum@55.0.31 --ignore-scripts --pack-destination "$RUNNER_TEMP" --silent
+          TPL="$RUNNER_TEMP/expo-template-bare-minimum-55.0.31.tgz"
+          echo "7920a96e7096dfdf66822f2ed434c65c51bc023f6b915230b5a47c4839820d53  $TPL" | sha256sum -c -
+          test "$(openssl dgst -sha512 -binary "$TPL" | openssl base64 -A)" = 'm95LaAA8DjDDiNKgndiyd4sSBGvgMJfevbGaQ3LcELJKJP2dedE/YwOvVysjzF2KZRG8bI/CO6GalW5uMp+3DQ=='
+      - name: Generate both native codebases without credential, upload or native install
+        shell: bash
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          set -euo pipefail
+          npx --no-install expo prebuild --no-install --platform all --template "$RUNNER_TEMP/expo-template-bare-minimum-55.0.31.tgz" --skip-dependency-update 'expo,react,react-native,expo-camera,expo-local-authentication,expo-secure-store'
+      - name: Verify Android cloud and device backup isolation, iOS ATS and Gradle SHA pins
+        env:
+          OP_EXPECTED_GIT_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 scripts/security/verify-generated-native-security.py
+          python3 scripts/security/test-generated-native-security.py
+      - name: Explicit native release refusal
+        env:
+          OP_EXPECTED_GIT_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if python3 scripts/security/verify-generated-native-security.py --production; then
+            echo 'ERROR_SIGNED_RELEASE_GATE_ACCEPTED_UNSIGNED_TEMPLATE'
+            exit 1
+          fi
+          echo 'NATIVE_RELEASE_FAIL_CLOSED=PASS'
+          echo 'SIGNING_APP_ATTEST_HARDWARE=NOT_CERTIFIED'
+          echo 'LIVE_FINANCE_SETTLEMENT=OFF'
+      - name: Verify no abnormal source edits
+        run: |
+          set -euo pipefail
+          git diff --check
+          test -f android/app/src/main/res/xml/orchidpay_no_data_extraction.xml
+          test -f ios/OrchidPay/OrchidPay.entitlements
+
+  debug-android:
+    name: Ephemeral Android debug assemble (no release or artifact upload)
+    needs: static-native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      GRADLE_USER_HOME: ${{ runner.temp }}/orchidpay-gradle-cache
+    steps:
+      - name: Checkout audited commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Pin Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Restore lockfile deps and fixed Foojay
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          node scripts/security/verify-local-security-forks.cjs
+          npm run eas-build-post-install
+          npm run verify:foojay
+      - name: Official pinned native template
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm pack expo-template-bare-minimum@55.0.31 --ignore-scripts --pack-destination "$RUNNER_TEMP" --silent
+          echo "7920a96e7096dfdf66822f2ed434c65c51bc023f6b915230b5a47c4839820d53  $RUNNER_TEMP/expo-template-bare-minimum-55.0.31.tgz" | sha256sum -c -
+      - name: Android native generation only
+        shell: bash
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          set -euo pipefail
+          npx --no-install expo prebuild --no-install --platform android --template "$RUNNER_TEMP/expo-template-bare-minimum-55.0.31.tgz" --skip-dependency-update 'expo,react,react-native,expo-camera,expo-local-authentication,expo-secure-store'
+          echo '76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3  android/gradle/wrapper/gradle-wrapper.jar' | sha256sum -c -
+          grep -qx 'distributionSha256Sum=8fad3d78296ca518113f3d29016617c7f9367dc005f932bd9d93bf45ba46072b' android/gradle/wrapper/gradle-wrapper.properties
+      - name: Assemble local-only debug APK, never signed release
+        shell: bash
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          set -euo pipefail
+          if test -d "$JAVA_HOME_17_X64"; then export JAVA_HOME="$JAVA_HOME_17_X64"; fi
+          test -d "$ANDROID_HOME"
+          java -version
+          cd android
+          bash ./gradlew :app:assembleDebug --no-daemon --max-workers=2 --stacktrace
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk
+          python3 - <<'PY'
+          import zipfile
+          p="app/build/outputs/apk/debug/app-debug.apk"
+          with zipfile.ZipFile(p) as z:
+              names=set(z.namelist())
+              assert "AndroidManifest.xml" in names
+              assert any(x.startswith("classes") and x.endswith(".dex") for x in names)
+          print("APK_DEBUG_STRUCTURE=PASS")
+          PY
+          echo 'ANDROID_DEBUG_NATIVE_ASSEMBLY=PASS'
+          echo 'APK_UPLOAD=NONE'
+          echo 'PLAY_STORE_RELEASE=NOT_CERTIFIED'
