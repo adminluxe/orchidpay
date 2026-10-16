@@ -153,7 +153,9 @@ jobs:
               files=z.namelist()
               assert 'AndroidManifest.xml' in files and 'resources.arsc' in files
               assert any(re.fullmatch(r'classes\d*\.dex', p) for p in files)
-              for name,_,_ in policy.RULES:
+              print('APK_COMPILED_XML_RESOURCE_FILES='+repr([p for p in files if p.startswith('res/xml/')][:70]))
+          print('APK_RESOURCE_NAMES_MATCH_BACKUP='+repr([p for p in files if 'backup' in p or 'extraction' in p][:45]))
+          for name,_,_ in policy.RULES:
                   assert len([x for x in files if re.fullmatch(
                       'res/xml/'+re.escape(name)+r'(?:_\d+)?\.xml',x)])==1
           xml=policy.decode_xml(analyzer,apk,'AndroidManifest.xml','manifest')
