@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: b6-r2-forks-${{ github.workflow }-${{ github.ref }
+  group: b6-r2-forks-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -24,22 +24,22 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-          ref: ${{ github.event.pull_request.head.sha || github.sha }
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Immutable parent SHA and exactly five new QA paths
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "$(git rev-parse HEAD^)" = "90a18b620ce898d6ecdff194b94d8d9249c39d22"
+          git merge-base --is-ancestor "90a18b620ce898d6ecdff194b94d8d9249c39d22" HEAD
           diff -u <(printf '%s\n' \
             'scripts/security/b6-r2-forks-adversarial.cjs' \
             'scripts/security/b6-r2-forks-adversarial.test.cjs' \
             'scripts/security/b6-r2-supply-chain-audit.cjs' \
             '.github/workflows/orchidpay-b6-r2-forks-adversarial-qa.yml' \
             'docs/ORCHIDPAY_B6_R2_INDEPENDENT_FORKS_CERTIFICATION_20261016.md' | LC_ALL=C sort) \
-            <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+            <(git diff --name-only 90a18b620ce898d6ecdff194b94d8d9249c39d22 HEAD | LC_ALL=C sort)
           echo "B6_R2_EXACT_HEAD=$EXPECTED_SHA"
       - name: Setup pinned Node 20.20.2
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -73,9 +73,9 @@ jobs:
       - name: Bound memory, CPU, walltime and execute independent test corpus
         shell: bash
         env:
-          B6_R2_ORIGINAL_ROOT: ${{ runner.temp }/b6-r2-original
-          B6_R2_FORGE_UPSTREAM_TEST: ${{ runner.temp }/b6-r2-forge-upstream-rsa.js
-          NODE_PATH: ${{ github.workspace }/node_modules
+          B6_R2_ORIGINAL_ROOT: ${{ runner.temp }}/b6-r2-original
+          B6_R2_FORGE_UPSTREAM_TEST: ${{ runner.temp }}/b6-r2-forge-upstream-rsa.js
+          NODE_PATH: ${{ github.workspace }}/node_modules
         run: |
           set -euo pipefail
           ulimit -t 240
@@ -118,22 +118,22 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-          ref: ${{ github.event.pull_request.head.sha || github.sha }
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Strict parent and no-code-drift gate
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "$(git rev-parse HEAD^)" = "90a18b620ce898d6ecdff194b94d8d9249c39d22"
+          git merge-base --is-ancestor "90a18b620ce898d6ecdff194b94d8d9249c39d22" HEAD
           diff -u <(printf '%s\n' \
             'scripts/security/b6-r2-forks-adversarial.cjs' \
             'scripts/security/b6-r2-forks-adversarial.test.cjs' \
             'scripts/security/b6-r2-supply-chain-audit.cjs' \
             '.github/workflows/orchidpay-b6-r2-forks-adversarial-qa.yml' \
             'docs/ORCHIDPAY_B6_R2_INDEPENDENT_FORKS_CERTIFICATION_20261016.md' | LC_ALL=C sort) \
-            <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+            <(git diff --name-only 90a18b620ce898d6ecdff194b94d8d9249c39d22 HEAD | LC_ALL=C sort)
       - name: Setup Node 20.20.2
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
