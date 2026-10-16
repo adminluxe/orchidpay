@@ -1,0 +1,107 @@
+name: OrchidPay B6 signed-release provenance negative QA - NO release
+
+on:
+  push:
+    branches:
+      - qa/op-p0-signed-release-readiness-20261016
+  pull_request:
+    branches:
+      - qa/op-p0-release-negative-control-20261016
+
+permissions:
+  contents: read
+
+concurrency:
+  group: op-b6-provenance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  synthetic-provenance:
+    name: Synthetic AAB and IPA provenance adversarial QA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable candidate without credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact source revision
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "B6_EXACT_SOURCE_SHA=PASS"
+      - name: Setup pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+      - name: Strict syntax, fixtures and adversarial refusals
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/security/verify-signed-release-provenance.cjs
+          node --check scripts/security/test-signed-release-provenance.cjs
+          node --test scripts/security/test-signed-release-provenance.cjs
+          node scripts/security/verify-signed-release-provenance.cjs --synthetic-smoke --json
+          echo 'B6_SYNTHETIC_ANDROID_IOS_ADVERSARIAL=PASS'
+      - name: Ensure no repository changes and no production promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test -z "$(git status --porcelain)"
+          echo 'B6_NO_ARTIFACT_UPLOAD_NO_KEYS_NO_FINANCIAL_LIVE=PASS'
+
+  independent-production-refusal:
+    name: Existing P0 source gate and B6 signing admission must refuse
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Exact SHA credentialless checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Match exact tested commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo 'B6_INDEPENDENT_SOURCE_PIN=PASS'
+      - name: Setup pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+      - name: Verify B6 refuses missing production evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          node scripts/security/verify-signed-release-provenance.cjs --require-production > "$RUNNER_TEMP/op-b6-refusal.txt" 2>&1
+          rc=$?
+          set -e
+          test "$rc" -eq 3
+          grep -Fq 'OP_B6_SIGNED_RELEASE_ADMISSION=NO_GO' "$RUNNER_TEMP/op-b6-refusal.txt"
+          echo 'B6_REAL_SIGNED_RELEASE_ABSENT_REFUSED=PASS'
+      - name: Preserve independent P0 production refusal
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          node scripts/security/verify-native-release-admission.cjs --require-production > "$RUNNER_TEMP/op-p0-refusal.txt" 2>&1
+          rc=$?
+          set -e
+          test "$rc" -eq 3
+          grep -Fq 'OP_PRODUCTION_RELEASE_ADMISSION=NO_GO' "$RUNNER_TEMP/op-p0-refusal.txt"
+          echo 'B6_PREVIOUS_SOURCE_PRODUCTION_REFUSAL=PASS'
+      - name: Explicitly deny release and money movement
+        run: |
+          echo 'SIGNED_PRODUCTION_AAB_IPA=NOT_CERTIFIED'
+          echo 'PLAY_INTEGRITY_APP_ATTEST_SERVER=NOT_CERTIFIED'
+          echo 'PAYMENTS_LIVE_SETTLEMENT_PAYOUT=OFF'
+          echo 'PRODUCTION_STORE_AND_MAIN_MERGE=NO_GO'
