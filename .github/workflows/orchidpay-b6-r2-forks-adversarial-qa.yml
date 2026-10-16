@@ -1,0 +1,189 @@
+name: OrchidPay B6-R2 isolated adversarial fork certification
+on:
+  push:
+    branches:
+      - qa/op-p0-forks-adversarial-cert-20261016
+  pull_request:
+    branches:
+      - qa/op-p0-signed-release-readiness-20261016
+permissions:
+  contents: read
+concurrency:
+  group: b6-r2-forks-${{ github.workflow }-${{ github.ref }
+  cancel-in-progress: false
+
+jobs:
+  b6-r2-adversarial:
+    name: B6-R2 independent braces and RSA adversarial QA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    if: github.repository == 'adminluxe/orchidpay'
+    steps:
+      - name: Checkout exact SHA without persisted credential
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }
+      - name: Immutable parent SHA and exactly five new QA paths
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD^)" = "90a18b620ce898d6ecdff194b94d8d9249c39d22"
+          diff -u <(printf '%s\n' \
+            'scripts/security/b6-r2-forks-adversarial.cjs' \
+            'scripts/security/b6-r2-forks-adversarial.test.cjs' \
+            'scripts/security/b6-r2-supply-chain-audit.cjs' \
+            '.github/workflows/orchidpay-b6-r2-forks-adversarial-qa.yml' \
+            'docs/ORCHIDPAY_B6_R2_INDEPENDENT_FORKS_CERTIFICATION_20261016.md' | LC_ALL=C sort) \
+            <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+          echo "B6_R2_EXACT_HEAD=$EXPECTED_SHA"
+      - name: Setup pinned Node 20.20.2
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Install immutable runtime candidate without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Independent tarball, license and upstream patch checks
+        run: |
+          set -euo pipefail
+          node scripts/security/b6-r2-supply-chain-audit.cjs --upstream
+          node scripts/security/verify-local-security-forks.cjs
+      - name: Download verified original negative controls and upstream RSA vector
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/b6-r2-tar" "$RUNNER_TEMP/b6-r2-original/braces" "$RUNNER_TEMP/b6-r2-original/node-forge"
+          npm pack braces@3.0.3 --ignore-scripts --silent --pack-destination "$RUNNER_TEMP/b6-r2-tar" >/dev/null
+          npm pack node-forge@1.4.0 --ignore-scripts --silent --pack-destination "$RUNNER_TEMP/b6-r2-tar" >/dev/null
+          echo "yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==  $RUNNER_TEMP/b6-r2-tar/braces-3.0.3.tgz" | while read -r expected file; do test "$(openssl dgst -sha512 -binary "$file" | openssl base64 -A)" = "$expected"; done
+          echo "LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==  $RUNNER_TEMP/b6-r2-tar/node-forge-1.4.0.tgz" | while read -r expected file; do test "$(openssl dgst -sha512 -binary "$file" | openssl base64 -A)" = "$expected"; done
+          tar -xzf "$RUNNER_TEMP/b6-r2-tar/braces-3.0.3.tgz" -C "$RUNNER_TEMP/b6-r2-original/braces" --strip-components=1
+          tar -xzf "$RUNNER_TEMP/b6-r2-tar/node-forge-1.4.0.tgz" -C "$RUNNER_TEMP/b6-r2-original/node-forge" --strip-components=1
+          curl --fail --silent --show-error --location --max-time 30 \
+            'https://raw.githubusercontent.com/digitalbazaar/forge/ceba34402e329f0365134f23fe19898756527d65/tests/unit/rsa.js' \
+            --output "$RUNNER_TEMP/b6-r2-forge-upstream-rsa.js"
+          echo "5079066b184c54f17d1dd6b286eb62a0330f91af94124b0f7a5786dc69a9be68  $RUNNER_TEMP/b6-r2-forge-upstream-rsa.js" | sha256sum -c -
+          echo 'B6_R2_ORIGINALS_AND_UPSTREAM_FIXTURE_PINNED=PASS'
+      - name: Bound memory, CPU, walltime and execute independent test corpus
+        shell: bash
+        env:
+          B6_R2_ORIGINAL_ROOT: ${{ runner.temp }/b6-r2-original
+          B6_R2_FORGE_UPSTREAM_TEST: ${{ runner.temp }/b6-r2-forge-upstream-rsa.js
+          NODE_PATH: ${{ github.workspace }/node_modules
+        run: |
+          set -euo pipefail
+          ulimit -t 240
+          ulimit -v 6291456
+          timeout -k 5s 240s node --max-old-space-size=384 --test scripts/security/b6-r2-forks-adversarial.test.cjs
+      - name: Npm registry advisory audit must be zero full and prod
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --json > "$RUNNER_TEMP/b6-r2-audit-full.json"
+          npm audit --omit=dev --json > "$RUNNER_TEMP/b6-r2-audit-prod.json"
+          node - "$RUNNER_TEMP/b6-r2-audit-full.json" "$RUNNER_TEMP/b6-r2-audit-prod.json" <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          for(const file of process.argv.slice(2)){
+            const report=JSON.parse(fs.readFileSync(file,'utf8'));
+            assert.equal(report.metadata?.vulnerabilities?.total,0,file);
+            console.log('B6_R2_NPM_AUDIT_0=PASS '+file.split('/').pop());
+          }
+          NODE
+      - name: Unpatched local-tarball advisory negative control
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -k 10s 420s bash scripts/security/verify-audit-negative-control.sh
+      - name: Explicit research-only boundary
+        run: |
+          echo 'B6_R2_SECURITY_ADVERSARIAL=PASS'
+          echo 'SECOND_INDEPENDENT_REVIEW=NOT_CERTIFIED'
+          echo 'NATIVE_SIGNED_APP_ATTEST_PLAY_INTEGRITY_PSP=NOT_CERTIFIED'
+          echo 'PRODUCTION_STORE_MERGE_LIVE_SETTLEMENT_PAYOUT=NO_GO'
+
+  b6-r2-mobile-and-forge:
+    name: B6-R2 independent dist reproducibility and Hermes parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    if: github.repository == 'adminluxe/orchidpay'
+    steps:
+      - name: Checkout same immutable SHA without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }
+      - name: Strict parent and no-code-drift gate
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD^)" = "90a18b620ce898d6ecdff194b94d8d9249c39d22"
+          diff -u <(printf '%s\n' \
+            'scripts/security/b6-r2-forks-adversarial.cjs' \
+            'scripts/security/b6-r2-forks-adversarial.test.cjs' \
+            'scripts/security/b6-r2-supply-chain-audit.cjs' \
+            '.github/workflows/orchidpay-b6-r2-forks-adversarial-qa.yml' \
+            'docs/ORCHIDPAY_B6_R2_INDEPENDENT_FORKS_CERTIFICATION_20261016.md' | LC_ALL=C sort) \
+            <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+      - name: Setup Node 20.20.2
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Reinstall root dependencies safely
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Independent source and lock inspection
+        run: node scripts/security/b6-r2-supply-chain-audit.cjs
+      - name: TypeScript and Hermes gate self-tests
+        run: |
+          set -euo pipefail
+          timeout -k 10s 420s npx --no-install tsc --noEmit
+          timeout -k 10s 120s node --test scripts/op-p0-qa-export-gate.test.cjs
+      - name: Explicit unsigned iOS Hermes export
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: timeout -k 10s 900s npx --no-install expo export --platform ios --output-dir "$RUNNER_TEMP/b6-r2-ios"
+      - name: Explicit unsigned Android Hermes export
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: timeout -k 10s 900s npx --no-install expo export --platform android --output-dir "$RUNNER_TEMP/b6-r2-android"
+      - name: Existing negative financial/off-fuses gates on both bundles
+        run: node scripts/op-p0-qa-export-gate.cjs "$RUNNER_TEMP/b6-r2-ios" "$RUNNER_TEMP/b6-r2-android"
+      - name: Rebuild pinned upstream node-forge with pinned developer lock
+        shell: bash
+        env:
+          NODE_OPTIONS: '--openssl-legacy-provider --max-old-space-size=4096'
+        run: |
+          set -euo pipefail
+          umask 077
+          echo '64a79e9fa88cfd83e9f989333becc05a2b6d5bb0819f5b82a2c152b9484760de  vendor/orchidpay-security/node-forge-builder.package-lock.json' | sha256sum -c -
+          git clone --quiet --depth 1 'https://github.com/digitalbazaar/forge.git' "$RUNNER_TEMP/b6-r2-forge-build"
+          git -C "$RUNNER_TEMP/b6-r2-forge-build" fetch --quiet --depth 1 origin refs/pull/1152/head
+          test "$(git -C "$RUNNER_TEMP/b6-r2-forge-build" rev-parse FETCH_HEAD)" = 'ceba34402e329f0365134f23fe19898756527d65'
+          git -C "$RUNNER_TEMP/b6-r2-forge-build" checkout --quiet --detach ceba34402e329f0365134f23fe19898756527d65
+          cmp "$RUNNER_TEMP/b6-r2-forge-build/lib/rsa.js" /dev/fd/3 3< <(tar -xOzf vendor/orchidpay-security/node-forge-1.4.1-orchidpay.1.tgz package/lib/rsa.js)
+          cp vendor/orchidpay-security/node-forge-builder.package-lock.json "$RUNNER_TEMP/b6-r2-forge-build/package-lock.json"
+          cd "$RUNNER_TEMP/b6-r2-forge-build"
+          timeout -k 10s 360s npm ci --ignore-scripts --no-audit --no-fund
+          timeout -k 10s 780s npm run build
+          echo 'a1d374dddbfd38635e74c08bddcd55553f9b3e29fa4346ff8ac8cbfa2f21414f  dist/forge.min.js' | sha256sum -c -
+          echo 'baaad7f257463658489c2860eb83da1ab6bf6485557a94a8a5a97f935784a1bb  dist/forge.all.min.js' | sha256sum -c -
+          echo '877bd31b0cc79ecb9163649034fbafaeec45e8e2861fc4fa9fb11335f28c4ef9  dist/prime.worker.min.js' | sha256sum -c -
+          echo 'FORGE_REBUILT_BYTE_IDENTICAL=PASS'
+      - name: Explicit nonproduction boundary
+        run: |
+          echo 'B6_R2_HERMES_AND_DIST_QA=PASS'
+          echo 'SIGNING_STORE_PAYMENTS_MERGE=NO_GO'
