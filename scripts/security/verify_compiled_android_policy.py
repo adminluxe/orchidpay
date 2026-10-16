@@ -52,14 +52,22 @@ def validate_manifest(xml, blocked, resource_ids=None):
         symbolic = ("@xml/" + resource,
                     "@com.delishafrica.orchidpaymobile:xml/" + resource)
         if ref not in symbolic:
-            # apkanalyzer may render compiled resource references numerically.
-            # The number is acceptable ONLY if independently resolved from
-            # the APK's own resource table to the expected named XML policy.
-            demand(re.fullmatch(r"@0[xX][0-9a-fA-F]{8}", ref) is not None,
-                   "APK_BACKUP_REFERENCE_INVALID_" + name)
+            # Android tools may decode a resource reference as hex, decimal,
+            # or a qualified identifier. NEVER accept a number unless AAPT2
+            # independently maps the ID to our required XML resource.
+            digits = None
+            if re.fullmatch(r"(?:@|@ref/)?0[xX][0-9a-fA-F]{8}", ref):
+                digits = int(ref[ref.lower().index("0x"):], 16)
+            elif re.fullmatch(r"@?[0-9]{8,10}", ref):
+                digits = int(ref.lstrip("@"), 10)
+            demand(digits is not None,
+                   "APK_BACKUP_REFERENCE_UNRECOGNIZED:" + name +
+                   ":" + repr(ref[:100]))
             demand(resource_ids is not None and
-                   int(ref[1:], 16) == resource_ids.get(resource),
-                   "APK_BACKUP_REFERENCE_MISMATCH_" + name)
+                   digits == resource_ids.get(resource),
+                   "APK_BACKUP_REFERENCE_MISMATCH:" + name + ":" +
+                   repr(ref[:100]) + ":expected=" +
+                   hex((resource_ids or {}).get(resource, 0)))
         elif resource_ids is not None:
             demand(resource in resource_ids,
                    "APK_BACKUP_RESOURCE_NOT_IN_COMPILED_TABLE_" + resource)

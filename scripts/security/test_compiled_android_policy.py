@@ -52,13 +52,33 @@ class CompiledPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "APK_BACKUP_REFERENCE_MISMATCH"):
             POL.validate_manifest(numeric, [PERM], resources)
 
+    def test_decimal_compiled_resource_ids_are_validated(self):
+        expected = {"orchidpay_no_backup": 0x7f120001,
+                    "orchidpay_no_data_extraction": 0x7f120002}
+        raw = M.replace("@xml/orchidpay_no_backup", "@" + str(0x7f120001))
+        raw = raw.replace("@xml/orchidpay_no_data_extraction",
+                          str(0x7f120002))
+        POL.validate_manifest(raw, [PERM], expected)
+
+    def test_qualified_hex_compiled_ref_is_validated(self):
+        ids = {"orchidpay_no_backup": 0x7f120001,
+               "orchidpay_no_data_extraction": 0x7f120002}
+        raw = M.replace("@xml/orchidpay_no_backup", "@ref/0x7f120001")
+        POL.validate_manifest(raw, [PERM], ids)
+
+    def test_invalid_literal_carries_nonsecret_diagnostic(self):
+        with self.assertRaisesRegex(ValueError,
+                                    "APK_BACKUP_REFERENCE_UNRECOGNIZED"):
+            POL.validate_manifest(M.replace("@xml/orchidpay_no_backup",
+                                             "@xml/wrong_resource"), [PERM])
+
     def test_backup_enabled_rejected(self):
         with self.assertRaisesRegex(ValueError, "APK_ALLOWBACKUP_NOT_FALSE"):
             POL.validate_manifest(M.replace('allowBackup="false"',
                                             'allowBackup="true"'), [])
 
     def test_wrong_backup_reference_rejected(self):
-        with self.assertRaisesRegex(ValueError, "APK_BACKUP_REFERENCE_INVALID"):
+        with self.assertRaisesRegex(ValueError, "APK_BACKUP_REFERENCE_UNRECOGNIZED"):
             POL.validate_manifest(M.replace('@xml/orchidpay_no_backup',
                                             '@xml/default_backup_rules'), [])
 

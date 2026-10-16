@@ -168,6 +168,10 @@ jobs:
           AAPT2="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 -print | sort -V | tail -n 1)"
           test -n "$ANALYZER" && test -x "$ANALYZER"
           test -n "$AAPT2" && test -x "$AAPT2"
+          echo 'COMPILED_APK_POLICY_REFERENCE_DIAGNOSTICS_BEGIN'
+          "$ANALYZER" manifest print android/app/build/outputs/apk/debug/app-debug.apk | \
+            sed -n '/android:allowBackup=/p;/android:fullBackupContent=/p;/android:dataExtractionRules=/p'
+          echo 'COMPILED_APK_POLICY_REFERENCE_DIAGNOSTICS_END'
           python3 scripts/security/verify_compiled_android_policy.py \
             --apk android/app/build/outputs/apk/debug/app-debug.apk \
             --apkanalyzer "$ANALYZER" --aapt2 "$AAPT2" --project .
