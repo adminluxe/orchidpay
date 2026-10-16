@@ -157,3 +157,17 @@ jobs:
           echo 'ANDROID_DEBUG_NATIVE_ASSEMBLY=PASS'
           echo 'APK_UPLOAD=NONE'
           echo 'PLAY_STORE_RELEASE=NOT_CERTIFIED'
+
+      - name: Inspect real APK binary manifest and compiled backup policies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          python3 -m unittest discover -s scripts/security -p 'test_compiled_android_policy.py' -v
+          ANALYZER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name apkanalyzer -print | sort -V | tail -n 1)"
+          test -n "$ANALYZER" && test -x "$ANALYZER"
+          python3 scripts/security/verify_compiled_android_policy.py \
+            --apk android/app/build/outputs/apk/debug/app-debug.apk \
+            --apkanalyzer "$ANALYZER" --project .
+          echo 'ANDROID_COMPILED_BINARY_BACKUP_GATE=PASS'
+          echo 'SIGNED_RELEASE_AND_FINANCE_LIVE=NO_GO'
