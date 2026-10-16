@@ -59,6 +59,23 @@ def validate(root: Path, release: bool = False) -> None:
     require(attrs.get(ANDROID_NS + "dataExtractionRules") == "@xml/orchidpay_no_data_extraction", "ANDROID_TRANSFER_POLICY_UNPINNED")
     require(attrs.get(ANDROID_NS + "usesCleartextTraffic") != "true", "ANDROID_RELEASE_CLEARTEXT_ENABLED")
 
+    # The Expo-generated debug/debugOptimized variants override app/src/main.
+    # Enforce absence in *every* high-priority manifest, not just the main XML.
+    protected_overlay_sha = "8c267f6c625e2f346bc73c1f96ec480e5fee51872e9272dee3a14a24164270f8"
+    blocked_permissions = set(app["android"]["blockedPermissions"])
+    for variant in ("debug", "debugOptimized"):
+        overlay_file = root / "android/app/src" / variant / "AndroidManifest.xml"
+        overlay = ET.parse(overlay_file).getroot()
+        require(overlay.tag == "manifest", "ANDROID_DEBUG_OVERLAY_ROOT_CHANGED:" + variant)
+        listed = {
+            e.attrib.get(ANDROID_NS + "name") for e in overlay
+            if e.tag in ("uses-permission", "uses-permission-sdk-23", "uses-permission-sdk-m")
+        }
+        require(not (listed & blocked_permissions),
+                "ANDROID_DEBUG_OVERLAY_FORBIDDEN_PERMISSION:" + variant)
+        require(hashlib.sha256(overlay_file.read_bytes()).hexdigest() == protected_overlay_sha,
+                "ANDROID_DEBUG_OVERLAY_UNRECOGNIZED_SOURCE:" + variant)
+
     backup = ET.parse(root / "android/app/src/main/res/xml/orchidpay_no_backup.xml").getroot()
     require(backup.tag == "full-backup-content", "OLD_ANDROID_BACKUP_POLICY_INVALID")
     require(any(x.tag == "exclude" and x.attrib == {"domain": "root", "path": "."} for x in backup),
@@ -105,6 +122,7 @@ def validate(root: Path, release: bool = False) -> None:
     debug_signer = bool(re.search(r"(?m)^\s*signingConfig\s+signingConfigs\.debug\b", release_section.group(1)))
     require((root / "android/gradle/wrapper/gradle-wrapper.properties").is_file(), "GRADLE_WRAPPER_MISSING")
 
+    print("ANDROID_DEBUG_AND_DEBUGOPTIMIZED_FORBIDDEN_PERMISSIONS_ABSENT=PASS")
     print("ANDROID_CLOUD_AND_DEVICE_TRANSFER_ROOT_EXCLUDED=PASS")
     print("ANDROID_ALLOWBACKUP_FALSE_AND_BLOCKED_PERMISSIONS=PASS")
     print("IOS_ATS_STRICT_AND_PERMISSION_STRINGS=PASS")

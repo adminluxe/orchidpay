@@ -48,6 +48,8 @@ jobs:
         run: |
           npm run eas-build-post-install
           npm run verify:foojay
+      - name: Reject high-priority debug permission overlay tampering
+        run: node --test scripts/security/test-debug-overlay-plugin.cjs
       - name: Pack official Expo 55.0.31 native template
         shell: bash
         run: |
@@ -113,6 +115,8 @@ jobs:
           node scripts/security/verify-local-security-forks.cjs
           npm run eas-build-post-install
           npm run verify:foojay
+      - name: Reject high-priority debug permission overlay tampering
+        run: node --test scripts/security/test-debug-overlay-plugin.cjs
       - name: Official pinned native template
         shell: bash
         run: |

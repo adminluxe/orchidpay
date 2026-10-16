@@ -48,6 +48,13 @@ def main() -> None:
       b'distributionSha256Sum=8fad3d78296ca518113f3d29016617c7f9367dc005f932bd9d93bf45ba46072b',
       b'distributionSha256Sum=' + b'0'*64,
       b'ANDROID_GRADLE_DISTRIBUTION_UNPINNED')
+    for variant in ("debug", "debugOptimized"):
+        exercise(
+          "android/app/src/" + variant + "/AndroidManifest.xml",
+          b'    <application android:usesCleartextTraffic="true"',
+          b'    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>\n'
+          b'    <application android:usesCleartextTraffic="true"',
+          b'ANDROID_DEBUG_OVERLAY_FORBIDDEN_PERMISSION')
     release = subprocess.run(CHECK + ["--production"], cwd=ROOT, capture_output=True, env=os.environ.copy())
     assert release.returncode != 0 and b'RELEASE_BLOCKED_DEBUG_SIGNING_CONFIG' in release.stderr
     print("UNSIGNED_DEVELOPMENT_RELEASE_REFUSAL=PASS")

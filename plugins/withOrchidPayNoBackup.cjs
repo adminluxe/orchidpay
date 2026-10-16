@@ -26,6 +26,43 @@ const EXTRACTION_XML = [
   ''
 ].join('\n');
 
+
+// Expo 55.0.31's development and debugOptimized manifest overlays
+// re-add SYSTEM_ALERT_WINDOW at higher merge priority than app/src/main.
+// Fail-closed exact-template pin; never mask a blocked compiled permission.
+const ORIGINAL_DEV_MANIFEST_SHA256 = 'fb1795032c764d975376e1612ab7022058eca2268a45efbe731a47a5d3ac0f60';
+const SECURED_DEV_MANIFEST_SHA256 = '8c267f6c625e2f346bc73c1f96ec480e5fee51872e9272dee3a14a24164270f8';
+const OVERLAY_FORBIDDEN_LINE = '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>\n';
+
+function stripDevelopmentOverlayPermission(androidRoot, variant) {
+  if (!['debug', 'debugOptimized'].includes(variant)) {
+    throw new Error('ORCHIDPAY_UNSUPPORTED_ANDROID_VARIANT');
+  }
+  const file = path.join(androidRoot, 'app', 'src', variant, 'AndroidManifest.xml');
+  if (!fs.statSync(file).isFile() || fs.lstatSync(file).isSymbolicLink()) {
+    throw new Error('ORCHIDPAY_DEBUG_MANIFEST_TYPE_INVALID:' + variant);
+  }
+  const before = fs.readFileSync(file);
+  const digest = value => crypto.createHash('sha256').update(value).digest('hex');
+  const originalHash = digest(before);
+  if (originalHash === SECURED_DEV_MANIFEST_SHA256) {
+    return; // explicitly idempotent, without weakening template checks.
+  }
+  if (originalHash !== ORIGINAL_DEV_MANIFEST_SHA256) {
+    throw new Error('ORCHIDPAY_DEBUG_TEMPLATE_DRIFT:' + variant);
+  }
+  const marker = Buffer.from(OVERLAY_FORBIDDEN_LINE, 'utf8');
+  const where = before.indexOf(marker);
+  if (where === -1 || before.indexOf(marker, where + marker.length) !== -1) {
+    throw new Error('ORCHIDPAY_UNEXPECTED_DEBUG_OVERLAY_PERMISSION_COUNT:' + variant);
+  }
+  const fixed = Buffer.concat([before.subarray(0, where), before.subarray(where + marker.length)]);
+  if (digest(fixed) !== SECURED_DEV_MANIFEST_SHA256) {
+    throw new Error('ORCHIDPAY_DEBUG_OVERLAY_PATCH_SHA_MISMATCH:' + variant);
+  }
+  fs.writeFileSync(file, fixed, {mode: 0o644});
+}
+
 module.exports = function withOrchidPayNoBackup(config) {
   config = withAndroidManifest(config, value => {
     const apps = value.modResults.manifest.application;
@@ -48,6 +85,11 @@ module.exports = function withOrchidPayNoBackup(config) {
     ]) {
       const dest = path.join(dir, name);
       fs.writeFileSync(dest, data, {encoding: 'utf8', mode: 0o644});
+    }
+
+    // High-priority debug manifests must never restore a blocked permission.
+    for (const variant of ['debug', 'debugOptimized']) {
+      stripDevelopmentOverlayPermission(value.modRequest.platformProjectRoot, variant);
     }
 
     // Supply-chain pin for the official Gradle 9.0.0 distribution and wrapper
@@ -79,3 +121,6 @@ module.exports = function withOrchidPayNoBackup(config) {
     return value;
   }]);
 };
+
+// Pure build-side helper for isolated, dependency-free adversarial tests.
+module.exports.testStripDevelopmentOverlayPermission = stripDevelopmentOverlayPermission;
