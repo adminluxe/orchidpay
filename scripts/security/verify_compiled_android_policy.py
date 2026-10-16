@@ -35,7 +35,7 @@ def parse_xml(source, label):
         raise ValueError("INVALID_XML_" + label) from exc
 
 
-def validate_manifest(xml, blocked):
+def validate_manifest(xml, blocked, resource_ids=None):
     root = parse_xml(xml, "MANIFEST")
     demand(root.tag == "manifest", "APK_MANIFEST_ROOT_CHANGED")
     demand(root.get("package") == EXPECTED_ID, "APK_APPLICATION_ID_WRONG")
@@ -49,8 +49,20 @@ def validate_manifest(xml, blocked):
         ("dataExtractionRules", "orchidpay_no_data_extraction"),
     ]:
         ref = app.get(ANDROID + name, "")
-        demand(ref in ("@xml/" + resource, "@com.delishafrica.orchidpaymobile:xml/" + resource),
-               "APK_BACKUP_REFERENCE_UNEXPECTED_" + name)
+        symbolic = ("@xml/" + resource,
+                    "@com.delishafrica.orchidpaymobile:xml/" + resource)
+        if ref not in symbolic:
+            # apkanalyzer may render compiled resource references numerically.
+            # The number is acceptable ONLY if independently resolved from
+            # the APK's own resource table to the expected named XML policy.
+            demand(re.fullmatch(r"@0[xX][0-9a-fA-F]{8}", ref) is not None,
+                   "APK_BACKUP_REFERENCE_INVALID_" + name)
+            demand(resource_ids is not None and
+                   int(ref[1:], 16) == resource_ids.get(resource),
+                   "APK_BACKUP_REFERENCE_MISMATCH_" + name)
+        elif resource_ids is not None:
+            demand(resource in resource_ids,
+                   "APK_BACKUP_RESOURCE_NOT_IN_COMPILED_TABLE_" + resource)
     demand(app.get(ANDROID + "debuggable") == "true",
            "APK_NOT_A_DEBUG_ONLY_BUILD")
     permissions = {
@@ -97,10 +109,44 @@ def decode_xml(tool, apk, path, category):
     return r.stdout
 
 
-def inspect(apk, tool, project):
+def parse_resource_ids(table):
+    result = {}
+    for line in table.splitlines():
+        match = re.match(
+            r"^\s*resource\s+(0x[0-9a-fA-F]{8})\s+"
+            r"(?:[^\s:]+:)?xml/([A-Za-z0-9_.-]+)(?::|\s|$)",
+            line,
+        )
+        if not match:
+            continue
+        resource = match.group(2)
+        if resource not in {item[0] for item in RULES}:
+            continue
+        demand(resource not in result, "APK_RESOURCE_TABLE_DUPLICATE:" + resource)
+        result[resource] = int(match.group(1), 16)
+    for name, _, _ in RULES:
+        demand(name in result, "APK_RESOURCE_TABLE_XML_NOT_FOUND:" + name)
+    demand(len(set(result.values())) == len(result), "APK_RESOURCE_TABLE_ID_COLLISION")
+    return result
+
+
+def resource_ids_from_apk(aapt2, apk):
+    result = subprocess.run(
+        [str(aapt2), "dump", "resources", str(apk)],
+        text=True, capture_output=True, timeout=60,
+    )
+    demand(result.returncode == 0, "AAPT2_RESOURCE_DUMP_FAILED:" +
+           str(result.returncode) + ":" + result.stderr[:260])
+    demand(50 < len(result.stdout) < 20000000, "AAPT2_RESOURCE_TABLE_SIZE_INVALID")
+    return parse_resource_ids(result.stdout)
+
+
+def inspect(apk, tool, aapt2, project):
     apk = apk.resolve(strict=True)
     tool = tool.resolve(strict=True)
+    aapt2 = aapt2.resolve(strict=True)
     demand(tool.is_file() and os.access(tool, os.X_OK), "APK_ANALYZER_NOT_EXECUTABLE")
+    demand(aapt2.is_file() and os.access(aapt2, os.X_OK), "AAPT2_NOT_EXECUTABLE")
     demand(apk.is_file() and apk.stat().st_size > 100000,
            "DEBUG_APK_MISSING_OR_TOO_SMALL")
     config = json.loads((project / "app.json").read_text())["expo"]
@@ -124,13 +170,15 @@ def inspect(apk, tool, project):
                    "APK_BACKUP_COMPILED_RESOURCE_NOT_UNIQUE:" + resource)
             rules.append((candidates[0], resource, kind, sections))
 
+    resources = resource_ids_from_apk(aapt2, apk)
     manifest = decode_xml(tool, apk, "AndroidManifest.xml", "manifest")
-    cleartext = validate_manifest(manifest, blocked)
+    cleartext = validate_manifest(manifest, blocked, resources)
     for path, resource, kind, sections in rules:
         content = decode_xml(tool, apk, path, "resource")
         validate_policy(content, resource, kind, sections)
         print("COMPILED_BACKUP_XML_ROOT_EXCLUSION=PASS:" + resource)
 
+    print("APK_COMPILED_BACKUP_RESOURCE_IDS_LINKED=PASS")
     print("APK_COMPILED_MANIFEST_NO_BACKUP=PASS")
     print("APK_COMPILED_FORBIDDEN_PERMISSIONS_ABSENT=PASS")
     print("APK_COMPILED_APPLICATION_ID=PASS")
@@ -143,10 +191,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--apk", required=True, type=Path)
     parser.add_argument("--apkanalyzer", required=True, type=Path)
+    parser.add_argument("--aapt2", required=True, type=Path)
     parser.add_argument("--project", default=".", type=Path)
     args = parser.parse_args()
     try:
-        inspect(args.apk, args.apkanalyzer, args.project.resolve())
+        inspect(args.apk, args.apkanalyzer, args.aapt2, args.project.resolve())
     except (ValueError, OSError, zipfile.BadZipFile, KeyError) as exc:
         print("APK_COMPILED_POLICY_QA=FAIL:" + str(exc), file=sys.stderr)
         return 1
