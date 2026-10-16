@@ -48,6 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           node --test scripts/security/test-native-release-admission.cjs
+          python3 -m unittest discover -s scripts/security -p 'test_release_optimized_resource_mapping.py' -v
           node scripts/security/verify-native-release-admission.cjs --json
       - name: Require deliberate NO-GO without independently signed evidence
         shell: bash
@@ -147,17 +148,19 @@ jobs:
           import os, sys, json, re, pathlib, xml.etree.ElementTree as ET, zipfile
           sys.path.insert(0, 'scripts/security')
           import verify_compiled_android_policy as policy
+          import verify_release_optimized_resource_mapping as resource_map
           apk=pathlib.Path(os.environ['APK']); analyzer=pathlib.Path(os.environ['ANALYZER'])
           aapt2=pathlib.Path(os.environ['AAPT2'])
           with zipfile.ZipFile(apk) as z:
               files=z.namelist()
+              assert len(files)==len(set(files))
               assert 'AndroidManifest.xml' in files and 'resources.arsc' in files
               assert any(re.fullmatch(r'classes\d*\.dex', p) for p in files)
-              print('APK_COMPILED_XML_RESOURCE_FILES='+repr([p for p in files if p.startswith('res/xml/')][:70]))
-          print('APK_RESOURCE_NAMES_MATCH_BACKUP='+repr([p for p in files if 'backup' in p or 'extraction' in p][:45]))
-          for name,_,_ in policy.RULES:
-                  assert len([x for x in files if re.fullmatch(
-                      'res/xml/'+re.escape(name)+r'(?:_\d+)?\.xml',x)])==1
+          # Android release optimization renames physical ZIP entries. Resolve
+          # original logical XML ID -> path through signed APK resource table,
+          # then decode and validate every actual XML variant. NO blind skips.
+          mapping=resource_map.resolve(resource_map.read_table(aapt2,apk),set(files))
+          print('RELEASE_COMPILED_RESOURCE_TABLE_XML_MAPPING=PASS')
           xml=policy.decode_xml(analyzer,apk,'AndroidManifest.xml','manifest')
           root=ET.fromstring(xml); ns='{http://schemas.android.com/apk/res/android}'
           cfg=json.load(open('app.json',encoding='utf-8'))['expo']
@@ -169,7 +172,7 @@ jobs:
           perms={e.get(ns+'name') for e in root if e.tag in
                  ('uses-permission','uses-permission-sdk-23','uses-permission-sdk-m')}
           assert not (perms & set(cfg['android']['blockedPermissions']))
-          ids=policy.resource_ids_from_apk(aapt2,apk)
+          ids={name: entry['id'] for name,entry in mapping.items()}
           for attr,name in [('fullBackupContent','orchidpay_no_backup'),
                             ('dataExtractionRules','orchidpay_no_data_extraction')]:
               ref=app.get(ns+attr,'')
@@ -182,11 +185,11 @@ jobs:
                   else: raise AssertionError('UNKNOWN_RELEASE_COMPILED_BACKUP_RESOURCE')
                   assert numeric==ids[name]
           for name,kind,sections in policy.RULES:
-              with zipfile.ZipFile(apk) as z:
-                  item=next(x for x in z.namelist() if re.fullmatch(
-                      'res/xml/'+re.escape(name)+r'(?:_\d+)?\.xml',x))
-              policy.validate_policy(policy.decode_xml(analyzer,apk,item,'resource'),
-                                     name,kind,sections)
+              for path in sorted(mapping[name]['paths']):
+                  policy.validate_policy(
+                      policy.decode_xml(analyzer,apk,path,'resource'),
+                      name,kind,sections)
+              print('RELEASE_COMPILED_BACKUP_RULE_VERIFIED=PASS:'+name)
           print('RELEASE_VARIANT_COMPILED_APK_PRIVACY_AND_PERMISSIONS=PASS')
           PY
           "$APKSIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/op-apksigner.txt"
