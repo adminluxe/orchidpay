@@ -1,0 +1,140 @@
+name: OrchidPay P0 factual-store closure (QA only)
+on:
+  push:
+    branches:
+      - qa/op-p0-store-factual-convergence-20261016
+  pull_request:
+    branches:
+      - qa/op-p0-forks-adversarial-cert-20261016
+permissions:
+  contents: read
+
+jobs:
+  factual-truth:
+    name: App Store text, site and package-release lockdown
+    if: github.repository == 'adminluxe/orchidpay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout immutable candidate without persisted token
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact commit / ancestry / file whitelist
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git merge-base --is-ancestor '126aa865c00842440a17a941373c11a0b795aaec' HEAD
+          diff -u <(printf '%s\n' \
+            '.github/workflows/apple-231-copy-surface-gate.yml' \
+            '.github/workflows/npm-publish-github-packages.yml' \
+            '.github/workflows/orchidpay-p0-store-closure-qa.yml' \
+            'docs/ARCHITECTURE_PIN.md' \
+            'docs/ORCHIDPAY_APPLE_REVIEW_REPLY_HOLD_2026-10-12.md' \
+            'docs/ORCHIDPAY_APPSTORE_COPY_B12_EN_FR_2026-10-12.json' \
+            'docs/ORCHIDPAY_APPSTORE_READY_TO_PASTE_B12_2026-10-12.md' \
+            'docs/ORCHIDPAY_SITE_231_ALIGNMENT_2026-10-12.md' \
+            'docs/ORCHIDPAY_P0_FINAL_CLOSURE_20261016.md' \
+            'docs/ROADBOOK_CURRENT.md' \
+            'scripts/orchidpay_apple231_copy_gate.py' \
+            'scripts/orchidpay_apple231_site_gate.py' \
+            'site/index.html' \
+            'site/legal/index.html' \
+            'site/privacy-choices/index.html' \
+            'site/privacy/index.html' \
+            'site/support/index.html' \
+            'site/terms/index.html' \
+            'src/screens/HomeScreen.tsx' | LC_ALL=C sort) \
+            <(git diff --name-only '126aa865c00842440a17a941373c11a0b795aaec' HEAD | LC_ALL=C sort)
+          echo "FINAL_QA_CANDIDATE_HEAD=$EXPECTED_SHA"
+      - name: Verify all EN/FR App Store copy is B12 QA only
+        run: python3 -B scripts/orchidpay_apple231_copy_gate.py
+      - name: Verify all six site pages and local QR truth
+        run: python3 -B scripts/orchidpay_apple231_site_gate.py
+      - name: Verify GitHub package publication is fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          wf=.github/workflows/npm-publish-github-packages.yml
+          test -f "$wf"
+          ! grep -Eq 'npm[[:space:]]+publish|packages:[[:space:]]*write' "$wf"
+          grep -Fq 'ORCHIDPAY_PACKAGE_PUBLICATION=NO_GO' "$wf"
+          grep -Fxq '          exit 1' "$wf"
+          echo 'PACKAGE_PUBLISH_FAIL_CLOSED=PASS'
+      - name: Expose release-binary admission boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const a=require('./app.json').expo;
+          if(a.ios.buildNumber !== '12' || a.android.versionCode !== 12)
+            throw Error('B12_QA_ONLY_VERSION_DRIFT');
+          console.log('B12_QA_SOURCE_ONLY=PASS; NEXT_STORE_BUILD_MUST_BE_GREATER_THAN_12');
+          console.log('APP_STORE_CONNECT_STATUS=NOT_VERIFIED');
+          console.log('SIGNED_IPA_AAB_AND_HUMAN_APPROVAL=NO_GO');
+          NODE
+          git diff --exit-code
+          echo 'FACTUAL_SITE_AND_PACKAGE_GATE=PASS'
+
+  unsigned-mobile-boundaries:
+    name: TypeScript, lockfile SCA and independent iOS/Android Hermes exports
+    if: github.repository == 'adminluxe/orchidpay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact candidate SHA and P0 ancestor
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git merge-base --is-ancestor '126aa865c00842440a17a941373c11a0b795aaec' HEAD
+      - name: Setup frozen Node toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Install only locked code without post-install hooks
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Exact package-fork attestation and compiler
+        run: |
+          set -euo pipefail
+          node scripts/security/verify-local-security-forks.cjs
+          npx --no-install tsc --noEmit
+          node --test scripts/op-p0-qa-export-gate.test.cjs
+      - name: Registry audit must return zero native exit code
+        run: |
+          set -euo pipefail
+          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high
+          echo 'REGISTRY_AUDIT=PASS;UPSTREAM_MAINTENANCE_STILL_REQUIRED'
+      - name: Build unsigned Hermes iOS JavaScript
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: timeout -k 10s 900s npx --no-install expo export --platform ios --output-dir "$RUNNER_TEMP/op-final-ios"
+      - name: Build unsigned Hermes Android JavaScript
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: timeout -k 10s 900s npx --no-install expo export --platform android --output-dir "$RUNNER_TEMP/op-final-android"
+      - name: Fail-closed financial boundary checks against exported JS
+        run: |
+          set -euo pipefail
+          node scripts/op-p0-qa-export-gate.cjs "$RUNNER_TEMP/op-final-ios" "$RUNNER_TEMP/op-final-android"
+          echo 'UNSIGNED_HERMES_QA=PASS'
+          echo 'PRODUCTION_SIGNED_RELEASE_APP_ATTEST_PLAY_INTEGRITY=NO_GO'
+          echo 'FINANCE_LIVE_SETTLEMENT_PAYOUT=OFF'

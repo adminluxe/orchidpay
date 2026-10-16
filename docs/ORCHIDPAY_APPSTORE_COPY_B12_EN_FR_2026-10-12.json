@@ -1,0 +1,41 @@
+{
+  "draftStatus": "QA_ONLY_NOT_APPLIED_APP_STORE_CONNECT",
+  "date": "2026-10-12",
+  "product": "OrchidPay",
+  "appId": "6808431270",
+  "iosBuild": "1.0.0 (12)",
+  "sourceOfTruth": "B12 AppShell.tsx and Apple 2.3.1(a) audit",
+  "reviewNotesNotPublishedAutomatically": true,
+  "categorySuggestion": "Utilities (requires owner agreement and product-utility review)",
+  "locales": {
+    "en-US": {
+      "name": "OrchidPay",
+      "subtitle": "Local Security & QR Reader",
+      "promotionalText": "Check app-session security, review local security activity and read QR code contents on your device. No banking, card or money-transfer features in this release.",
+      "description": "OrchidPay helps you review local app-session security information and inspect QR codes directly on your device.\n\nWHAT YOU CAN DO\n• Check biometric authentication and secure-storage availability for this app.\n• Use supported on-device authentication to access protected OrchidPay screens and lock your session.\n• Review a local log of session and security events.\n• Scan a QR code and preview its readable content locally, without automatic navigation or payment initiation.\n• Find security, privacy and support information.\n\nIMPORTANT\nReading a QR code does not validate its sender, a payment recipient or the safety of its contents. OrchidPay does not verify financial transactions.\n\nThis release has no banking account, customer balance, virtual or physical payment card, deposits, withdrawals, money transfers or settlement. OrchidPay does not hold or move customer funds.\n\nSome capabilities depend on biometric and secure-storage features supported by your device and operating system.\n\nSupport: https://www.orchidpay.online/support/",
+      "keywords": "qr scanner,local security,biometrics,session lock,privacy,activity log"
+    },
+    "fr-FR": {
+      "name": "OrchidPay",
+      "subtitle": "Sécurité locale et lecteur QR",
+      "promotionalText": "Consultez la sécurité de votre session, le journal local et le contenu de QR codes. Aucun compte bancaire ni transfert d’argent dans cette version.",
+      "description": "OrchidPay vous permet de consulter des informations de sécurité liées à votre session et de lire le contenu de QR codes sur votre appareil.\n\nFONCTIONS DISPONIBLES\n• Consultez la disponibilité de la biométrie et du stockage sécurisé utilisés par l’application.\n• Utilisez l’authentification proposée par votre appareil pour accéder aux écrans protégés et verrouiller la session.\n• Retrouvez le journal local des événements de session et de sécurité.\n• Scannez un QR code pour en afficher un aperçu lisible sur l’appareil, sans navigation ni paiement automatiques.\n• Accédez aux informations d’assistance, de sécurité et de confidentialité.\n\nIMPORTANT\nLire un QR code ne permet pas de certifier son auteur, un bénéficiaire de paiement ou la fiabilité de son contenu. OrchidPay ne vérifie aucune transaction financière.\n\nCette version ne propose aucun compte bancaire, solde client, carte de paiement virtuelle ou physique, dépôt, retrait, transfert d’argent ou règlement financier. OrchidPay ne conserve ni ne transfère de fonds clients.\n\nCertaines fonctions dépendent des capacités biométriques et de stockage sécurisé de votre appareil et de son système d’exploitation.\n\nAssistance : https://www.orchidpay.online/support/",
+      "keywords": "lecteur qr,sécurité locale,biométrie,session,confidentialité,journal"
+    }
+  },
+  "reviewNotesEn": "OrchidPay iOS 1.0.0 (build 12) provides local app-session protection, native biometric/secure-storage status, a local security-event journal and a QR-content reader. It does not provide bank accounts, balances, cards, deposits, withdrawals, transfers or payment execution.\n\nThe current UI is in French. Reviewer steps:\n1. Open the app; the Accueil (Home) tab shows shortcuts. Tap Sécurité for the session state, biometric availability and on-device authentication check.\n2. Tap Vérifier un QR (QR tab). Tap Continuer if iOS requests camera permission, scan a QR code, and see a local text preview. Nothing is opened, verified as trustworthy or paid automatically.\n3. Tap Activité to see locally recorded security/session entries. The list can be empty before events occur.\n4. Tap Profil for device information, privacy and Centre d’aide (Help). The session can also be locked manually; after about 60 seconds in the background, it is locked automatically.\n\nNo financial credentials, PSP access or banking user account are required for review. Face ID/biometrics and secure storage depend on device capabilities. We identified and are correcting older metadata and site references that incorrectly described unimplemented banking features. Future financial functionality, if ever offered, will require separate authorization, full disclosure and App Review; it will not be silently enabled in this build. If you encountered an actual financial screen, please send the navigation steps so we can reproduce and remedy it.",
+  "supportUrl": "https://www.orchidpay.online/support/",
+  "marketingUrl": "https://www.orchidpay.online/",
+  "screenshotCheck": [
+    "Actual Accueil home (no money promises)",
+    "Actual Sécurité biometric status (no false guarantee)",
+    "Actual Vérifier un QR camera and local preview (no payment verification)",
+    "Actual Activité local session events",
+    "Actual Profil and support"
+  ],
+  "currentReviewDecision": "Do not withdraw, resubmit, or edit review metadata while review continues without checking current version status and explicit approval.",
+  "policyReferences": [
+    "https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information",
+    "https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/remove-a-submission-from-review"
+  ]
+}
