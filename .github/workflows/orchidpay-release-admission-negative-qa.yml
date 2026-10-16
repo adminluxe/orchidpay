@@ -1,0 +1,211 @@
+name: OrchidPay P0 release negative-control QA - NO deployment
+
+on:
+  push:
+    branches:
+      - qa/op-p0-release-negative-control-20261016
+  pull_request:
+    branches:
+      - qa/op-p0-native-privacy-20261016
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: op-p0-release-negative-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  admission-source:
+    name: Verify source trust fuses and refuse production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Exact reviewed checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact candidate SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Pinned Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Verify lockfile and security fork provenance
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          node scripts/security/verify-local-security-forks.cjs
+          npm audit --omit=dev --audit-level=high
+      - name: Adversarial source admission checks
+        run: |
+          set -euo pipefail
+          node --test scripts/security/test-native-release-admission.cjs
+          python3 -m unittest discover -s scripts/security -p 'test_release_optimized_resource_mapping.py' -v
+          python3 -m unittest discover -s scripts/security -p 'test_parse_apksigner_certificate.py' -v
+          node scripts/security/verify-native-release-admission.cjs --json
+      - name: Require deliberate NO-GO without independently signed evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          node scripts/security/verify-native-release-admission.cjs --require-production > "$RUNNER_TEMP/production-refusal.txt" 2>&1
+          rc=$?
+          set -e
+          test "$rc" -eq 3
+          grep -Fq 'OP_PRODUCTION_RELEASE_ADMISSION=NO_GO' "$RUNNER_TEMP/production-refusal.txt"
+          echo 'UNVERIFIED_SIGNED_RELEASE_AND_FINANCIAL_PRODUCTION_REJECTED=PASS'
+      - name: Verify no unintended source mutation
+        run: |
+          set -euo pipefail
+          git diff --check
+          test -f modules/orchidpay-app-attest/ios/OrchidPayAppAttestModule.swift
+
+  release-template-negative-control:
+    name: Assemble Android release variant with known debug signer; reject for Store
+    needs: admission-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Credentialless reviewed checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Pinned Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.20.2'
+          cache: npm
+      - name: Restore exact dependency tree and Gradle patch
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          node scripts/security/verify-local-security-forks.cjs
+          npm run eas-build-post-install
+          npm run verify:foojay
+      - name: Supply-chain pin Expo 55.0.31 native template
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm pack expo-template-bare-minimum@55.0.31 --ignore-scripts --pack-destination "$RUNNER_TEMP" --silent
+          TPL="$RUNNER_TEMP/expo-template-bare-minimum-55.0.31.tgz"
+          echo "7920a96e7096dfdf66822f2ed434c65c51bc023f6b915230b5a47c4839820d53  $TPL" | sha256sum -c -
+          test "$(openssl dgst -sha512 -binary "$TPL" | openssl base64 -A)" = 'm95LaAA8DjDDiNKgndiyd4sSBGvgMJfevbGaQ3LcELJKJP2dedE/YwOvVysjzF2KZRG8bI/CO6GalW5uMp+3DQ=='
+      - name: Offline native generation and debug signer preflight
+        shell: bash
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          set -euo pipefail
+          node --test scripts/security/test-debug-overlay-plugin.cjs
+          npx --no-install expo prebuild --no-install --platform android --template "$RUNNER_TEMP/expo-template-bare-minimum-55.0.31.tgz" --skip-dependency-update 'expo,react,react-native,expo-camera,expo-local-authentication,expo-secure-store'
+          echo '76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3  android/gradle/wrapper/gradle-wrapper.jar' | sha256sum -c -
+          grep -qx 'distributionSha256Sum=8fad3d78296ca518113f3d29016617c7f9367dc005f932bd9d93bf45ba46072b' android/gradle/wrapper/gradle-wrapper.properties
+          node - <<'JS'
+          const fs=require('node:fs');
+          const s=fs.readFileSync('android/app/build.gradle','utf8');
+          if(!/release\s*\{[\s\S]{0,600}signingConfig\s+signingConfigs\.debug\b/.test(s)){
+            throw Error('RELEASE_SIGNING_CONFIG_CHANGED:STOP_AND_REVIEW');
+          }
+          console.log('TEMPLATE_RELEASE_VARIANT_DEBUG_SIGNING_NEGATIVE_CONTROL=PASS');
+          JS
+      - name: Assemble release variant for local-only negative control
+        shell: bash
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+          GRADLE_USER_HOME: ${{ runner.temp }}/op-release-negative-gradle
+        run: |
+          set -euo pipefail
+          if test -d "$JAVA_HOME_17_X64"; then export JAVA_HOME="$JAVA_HOME_17_X64"; fi
+          test -d "$ANDROID_HOME"
+          cd android
+          bash ./gradlew :app:assembleRelease --no-daemon --max-workers=2
+          test -s app/build/outputs/apk/release/app-release.apk
+          echo 'ANDROID_RELEASE_VARIANT_COMPILER=PASS'
+          echo 'REAL_PRODUCTION_SIGNING=NO_GO'
+      - name: Inspect compiled release manifest and reject its debug signing certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          ANALYZER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name apkanalyzer -print | sort -V | tail -n 1)"
+          AAPT2="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 -print | sort -V | tail -n 1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          test -x "$ANALYZER" && test -x "$AAPT2" && test -x "$APKSIGNER"
+          export APK ANALYZER AAPT2
+          python3 - <<'PY'
+          import os, sys, json, re, pathlib, xml.etree.ElementTree as ET, zipfile
+          sys.path.insert(0, 'scripts/security')
+          import verify_compiled_android_policy as policy
+          import verify_release_optimized_resource_mapping as resource_map
+          apk=pathlib.Path(os.environ['APK']); analyzer=pathlib.Path(os.environ['ANALYZER'])
+          aapt2=pathlib.Path(os.environ['AAPT2'])
+          with zipfile.ZipFile(apk) as z:
+              files=z.namelist()
+              assert len(files)==len(set(files))
+              assert 'AndroidManifest.xml' in files and 'resources.arsc' in files
+              assert any(re.fullmatch(r'classes\d*\.dex', p) for p in files)
+          # Android release optimization renames physical ZIP entries. Resolve
+          # original logical XML ID -> path through signed APK resource table,
+          # then decode and validate every actual XML variant. NO blind skips.
+          mapping=resource_map.resolve(resource_map.read_table(aapt2,apk),set(files))
+          print('RELEASE_COMPILED_RESOURCE_TABLE_XML_MAPPING=PASS')
+          xml=policy.decode_xml(analyzer,apk,'AndroidManifest.xml','manifest')
+          root=ET.fromstring(xml); ns='{http://schemas.android.com/apk/res/android}'
+          cfg=json.load(open('app.json',encoding='utf-8'))['expo']
+          assert root.get('package')=='com.delishafrica.orchidpaymobile'
+          apps=root.findall('application'); assert len(apps)==1; app=apps[0]
+          assert app.get(ns+'debuggable')!='true'
+          assert app.get(ns+'allowBackup')=='false'
+          assert app.get(ns+'usesCleartextTraffic')!='true'
+          perms={e.get(ns+'name') for e in root if e.tag in
+                 ('uses-permission','uses-permission-sdk-23','uses-permission-sdk-m')}
+          assert not (perms & set(cfg['android']['blockedPermissions']))
+          ids={name: entry['id'] for name,entry in mapping.items()}
+          for attr,name in [('fullBackupContent','orchidpay_no_backup'),
+                            ('dataExtractionRules','orchidpay_no_data_extraction')]:
+              ref=app.get(ns+attr,'')
+              if ref in ('@xml/'+name,'@com.delishafrica.orchidpaymobile:xml/'+name):
+                  assert name in ids
+              else:
+                  hit=re.fullmatch(r'(?:@|@ref/)?0[xX]([0-9a-fA-F]{8})',ref)
+                  if hit: numeric=int(hit.group(1),16)
+                  elif re.fullmatch(r'@?[0-9]{8,10}',ref): numeric=int(ref.lstrip('@'))
+                  else: raise AssertionError('UNKNOWN_RELEASE_COMPILED_BACKUP_RESOURCE')
+                  assert numeric==ids[name]
+          for name,kind,sections in policy.RULES:
+              for path in sorted(mapping[name]['paths']):
+                  policy.validate_policy(
+                      policy.decode_xml(analyzer,apk,path,'resource'),
+                      name,kind,sections)
+              print('RELEASE_COMPILED_BACKUP_RULE_VERIFIED=PASS:'+name)
+          print('RELEASE_VARIANT_COMPILED_APK_PRIVACY_AND_PERMISSIONS=PASS')
+          PY
+          "$APKSIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/op-apksigner.txt"
+          echo 'APKSIGNER_CRYPTOGRAPHIC_APK_VALIDITY=PASS'
+          keytool -exportcert -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/op-debug.der" > /dev/null 2>&1
+          echo 'EPHEMERAL_TEMPLATE_DEBUG_CERT_EXPORTED=PASS'
+          EXPECTED="$(sha256sum "$RUNNER_TEMP/op-debug.der" | awk '{print $1}')"
+          ACTUAL="$(python3 scripts/security/parse_apksigner_certificate.py --input "$RUNNER_TEMP/op-apksigner.txt")"
+          test -n "$EXPECTED" && test -n "$ACTUAL"
+          if test "$ACTUAL" != "$EXPECTED"; then
+            echo "TEMPLATE_DEBUG_CERT_SHA256=$EXPECTED"
+            echo "COMPILED_RELEASE_APK_CERT_SHA256=$ACTUAL"
+            echo 'NEGATIVE_CONTROL_EXPECTED_DEBUG_CERT_MISMATCH=FAIL'
+            exit 1
+          fi
+          echo 'UNSAFE_TEMPLATE_RELEASE_DEBUG_CERT_MATCH=PASS'
+          echo 'STORE_SIGNATURE_PROMOTION_REFUSED=PASS'
+          echo 'NO_BINARY_UPLOAD_NO_REAL_KEYS_NO_FINANCIAL_LIVE=PASS'
