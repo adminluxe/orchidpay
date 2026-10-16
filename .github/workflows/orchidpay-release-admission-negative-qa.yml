@@ -49,6 +49,7 @@ jobs:
           set -euo pipefail
           node --test scripts/security/test-native-release-admission.cjs
           python3 -m unittest discover -s scripts/security -p 'test_release_optimized_resource_mapping.py' -v
+          python3 -m unittest discover -s scripts/security -p 'test_parse_apksigner_certificate.py' -v
           node scripts/security/verify-native-release-admission.cjs --json
       - name: Require deliberate NO-GO without independently signed evidence
         shell: bash
@@ -193,11 +194,18 @@ jobs:
           print('RELEASE_VARIANT_COMPILED_APK_PRIVACY_AND_PERMISSIONS=PASS')
           PY
           "$APKSIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/op-apksigner.txt"
+          echo 'APKSIGNER_CRYPTOGRAPHIC_APK_VALIDITY=PASS'
           keytool -exportcert -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/op-debug.der" > /dev/null 2>&1
+          echo 'EPHEMERAL_TEMPLATE_DEBUG_CERT_EXPORTED=PASS'
           EXPECTED="$(sha256sum "$RUNNER_TEMP/op-debug.der" | awk '{print $1}')"
-          ACTUAL="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/op-apksigner.txt" | tr -d '\r\n[:space:]')"
+          ACTUAL="$(python3 scripts/security/parse_apksigner_certificate.py --input "$RUNNER_TEMP/op-apksigner.txt")"
           test -n "$EXPECTED" && test -n "$ACTUAL"
-          test "$ACTUAL" = "$EXPECTED"
+          if test "$ACTUAL" != "$EXPECTED"; then
+            echo "TEMPLATE_DEBUG_CERT_SHA256=$EXPECTED"
+            echo "COMPILED_RELEASE_APK_CERT_SHA256=$ACTUAL"
+            echo 'NEGATIVE_CONTROL_EXPECTED_DEBUG_CERT_MISMATCH=FAIL'
+            exit 1
+          fi
           echo 'UNSAFE_TEMPLATE_RELEASE_DEBUG_CERT_MATCH=PASS'
           echo 'STORE_SIGNATURE_PROMOTION_REFUSED=PASS'
           echo 'NO_BINARY_UPLOAD_NO_REAL_KEYS_NO_FINANCIAL_LIVE=PASS'
