@@ -48,7 +48,31 @@ jobs:
           mkdir -m 700 "$B7_WORK"
           mkdir "$B7_WORK/evidence"
           { node --version; npm --version; python3 --version; bwrap --version; } > "$B7_WORK/evidence/toolchain.txt"
+          # Ubuntu 24.04 AppArmor may deny unprivileged Bubblewrap network namespaces.
+          # Fail closed; NEVER change host-wide user namespace sysctls or use root sandbox execution.
+          if ! bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1' > "$B7_WORK/evidence/bwrap-baseline.log" 2>&1; then
+            grep -Fq 'loopback: Failed RTM_NEWADDR: Operation not permitted' "$B7_WORK/evidence/bwrap-baseline.log" || { cat "$B7_WORK/evidence/bwrap-baseline.log"; exit 88; }
+            . /etc/os-release
+            test "$ID" = ubuntu && test "$VERSION_ID" = 24.04
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            sudo apt-get update -qq
+            sudo apt-get install -y apparmor-profiles apparmor-utils
+            P=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+            test -f "$P" && test ! -L "$P"
+            sha256sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha256"
+            sha512sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha512"
+            if sudo test -e /etc/apparmor.d/bwrap-userns-restrict; then
+              sudo cmp -s "$P" /etc/apparmor.d/bwrap-userns-restrict || { echo B7_UNEXPECTED_EXISTING_APPARMOR_PROFILE; exit 89; }
+            else
+              sudo install -m 0644 "$P" /etc/apparmor.d/bwrap-userns-restrict
+            fi
+            sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            dpkg-query -W apparmor-profiles apparmor-utils > "$B7_WORK/evidence/apparmor-package-versions.txt"
+            echo B7_DISTRO_PROFILE_LOADED_WITH_HOST_POLICY_UNCHANGED
+          fi
           bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1'
+          echo B7_OFFLINE_SANDBOX_ACTIVE
       - name: Install exact application lock without lifecycle scripts
         run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
       - name: Acquire SHA256 and SHA512 pinned public negative controls
@@ -103,7 +127,31 @@ jobs:
           mkdir -m 700 "$B7_WORK"
           mkdir "$B7_WORK/evidence"
           { node --version; npm --version; python3 --version; bwrap --version; } > "$B7_WORK/evidence/toolchain.txt"
+          # Ubuntu 24.04 AppArmor may deny unprivileged Bubblewrap network namespaces.
+          # Fail closed; NEVER change host-wide user namespace sysctls or use root sandbox execution.
+          if ! bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1' > "$B7_WORK/evidence/bwrap-baseline.log" 2>&1; then
+            grep -Fq 'loopback: Failed RTM_NEWADDR: Operation not permitted' "$B7_WORK/evidence/bwrap-baseline.log" || { cat "$B7_WORK/evidence/bwrap-baseline.log"; exit 88; }
+            . /etc/os-release
+            test "$ID" = ubuntu && test "$VERSION_ID" = 24.04
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            sudo apt-get update -qq
+            sudo apt-get install -y apparmor-profiles apparmor-utils
+            P=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+            test -f "$P" && test ! -L "$P"
+            sha256sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha256"
+            sha512sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha512"
+            if sudo test -e /etc/apparmor.d/bwrap-userns-restrict; then
+              sudo cmp -s "$P" /etc/apparmor.d/bwrap-userns-restrict || { echo B7_UNEXPECTED_EXISTING_APPARMOR_PROFILE; exit 89; }
+            else
+              sudo install -m 0644 "$P" /etc/apparmor.d/bwrap-userns-restrict
+            fi
+            sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            dpkg-query -W apparmor-profiles apparmor-utils > "$B7_WORK/evidence/apparmor-package-versions.txt"
+            echo B7_DISTRO_PROFILE_LOADED_WITH_HOST_POLICY_UNCHANGED
+          fi
           bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1'
+          echo B7_OFFLINE_SANDBOX_ACTIVE
       - name: Install exact application lock without lifecycle scripts
         run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
       - name: Offline TypeScript and unsigned mobile QA
@@ -168,7 +216,31 @@ jobs:
           mkdir -m 700 "$B7_WORK"
           mkdir "$B7_WORK/evidence"
           { node --version; npm --version; python3 --version; bwrap --version; } > "$B7_WORK/evidence/toolchain.txt"
+          # Ubuntu 24.04 AppArmor may deny unprivileged Bubblewrap network namespaces.
+          # Fail closed; NEVER change host-wide user namespace sysctls or use root sandbox execution.
+          if ! bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1' > "$B7_WORK/evidence/bwrap-baseline.log" 2>&1; then
+            grep -Fq 'loopback: Failed RTM_NEWADDR: Operation not permitted' "$B7_WORK/evidence/bwrap-baseline.log" || { cat "$B7_WORK/evidence/bwrap-baseline.log"; exit 88; }
+            . /etc/os-release
+            test "$ID" = ubuntu && test "$VERSION_ID" = 24.04
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            sudo apt-get update -qq
+            sudo apt-get install -y apparmor-profiles apparmor-utils
+            P=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+            test -f "$P" && test ! -L "$P"
+            sha256sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha256"
+            sha512sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha512"
+            if sudo test -e /etc/apparmor.d/bwrap-userns-restrict; then
+              sudo cmp -s "$P" /etc/apparmor.d/bwrap-userns-restrict || { echo B7_UNEXPECTED_EXISTING_APPARMOR_PROFILE; exit 89; }
+            else
+              sudo install -m 0644 "$P" /etc/apparmor.d/bwrap-userns-restrict
+            fi
+            sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            dpkg-query -W apparmor-profiles apparmor-utils > "$B7_WORK/evidence/apparmor-package-versions.txt"
+            echo B7_DISTRO_PROFILE_LOADED_WITH_HOST_POLICY_UNCHANGED
+          fi
           bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1'
+          echo B7_OFFLINE_SANDBOX_ACTIVE
       - name: Install exact application lock without lifecycle scripts
         run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
       - name: Native audit - no exception to zero HIGH or CRITICAL

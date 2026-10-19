@@ -23,8 +23,11 @@ if a.git:
  actual=subprocess.check_output(['git','-C',str(r),'diff','--name-only',BASE,head]).decode().splitlines()
  assert sorted(actual)==sorted(scope['changedPaths']), 'DIFF_SCOPE_DRIFT'
  commits=subprocess.check_output(['git','-C',str(r),'rev-list',BASE+'..'+head]).decode().splitlines()
- assert len(commits)==2 and commits[1]=='4ba09daf2c6de8be05e6822984475cda3705b4ae', 'Unexpected QA commit ancestry'
- assert subprocess.check_output(['git','-C',str(r),'rev-parse',commits[1]+'^']).decode().strip()==BASE, 'Original QA parent drift'
- hotfix=subprocess.check_output(['git','-C',str(r),'diff','--name-only',commits[1],head]).decode().splitlines()
- assert sorted(hotfix)==sorted(['.github/workflows/orchidpay-b7-r2-qa.yml','scripts/security/b7/boundary-check.py']), 'Unexpected hotfix files'
+ assert len(commits)==3 and commits[1]=='bd6756b2a333fee78a3f4b8d358f44d2cf1bf31b' and commits[2]=='4ba09daf2c6de8be05e6822984475cda3705b4ae', 'Unexpected QA commit ancestry'
+ assert subprocess.check_output(['git','-C',str(r),'rev-parse',commits[2]+'^']).decode().strip()==BASE, 'Original QA parent drift'
+ assert subprocess.check_output(['git','-C',str(r),'rev-parse',commits[1]+'^']).decode().strip()==commits[2], 'CI hotfix parent drift'
+ expected=['.github/workflows/orchidpay-b7-r2-qa.yml','scripts/security/b7/boundary-check.py']
+ for parent,child in [(commits[2],commits[1]),(commits[1],head)]:
+  changed=subprocess.check_output(['git','-C',str(r),'diff','--name-only',parent,child]).decode().splitlines()
+  assert sorted(changed)==sorted(expected), 'Unexpected CI hotfix paths'
 print('B7_QA_BOUNDARIES_PASS; RELEASE_AND_FINANCE_OFF')
