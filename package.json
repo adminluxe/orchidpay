@@ -19,8 +19,8 @@
     "react": "19.2.0",
     "react-native": "0.83.10",
     "react-native-safe-area-context": "~5.6.2",
-    "braces": "file:vendor/orchidpay-security/braces-3.0.4-orchidpay.1.tgz",
-    "node-forge": "file:vendor/orchidpay-security/node-forge-1.4.1-orchidpay.1.tgz"
+    "braces": "file:vendor/orchidpay-security/braces-3.0.3-orchidpay-b7.2.tgz",
+    "node-forge": "file:vendor/orchidpay-security/node-forge-1.4.0-orchidpay-b7.2.tgz"
   },
   "private": true,
   "devDependencies": {

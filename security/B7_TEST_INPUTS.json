@@ -1,0 +1,32 @@
+{
+  "original-braces": {
+    "url": "https://registry.npmjs.org/braces/-/braces-3.0.3.tgz",
+    "sha256": "1cd18e862c8640b4568b1425a7df4ee030ff201d45b2da8f9f222d2987494ffc",
+    "sha512": "c906d780efce499543d88b222e5ae8fbb1dfe90d7c109aca484b1da0ccca78f29772dde0bc3f282dc390748cc6ba9af9163f840def203bf9717350737cca71bc",
+    "size": 13972
+  },
+  "original-node-forge": {
+    "url": "https://registry.npmjs.org/node-forge/-/node-forge-1.4.0.tgz",
+    "sha256": "bf9d7ca0d774235354697bd4b5e642af6505e7ce2066762c3b855138cf870820",
+    "sha512": "2daac51f4fba55fae2121a8c31c2d7d85ed2c125de5b09c400912c626e50296721895615bc9c95f6fed40ef52ffb0e473b6dd9a504d70effc6c5d0dd3323aea1",
+    "size": 435334
+  },
+  "b6-braces": {
+    "url": "https://raw.githubusercontent.com/adminluxe/orchidpay/1d7e215a0547532fff5bf1b5f7803d3584a73391/vendor/orchidpay-security/braces-3.0.4-orchidpay.1.tgz",
+    "sha256": "d19e3433e7b06239810c6cf160223d57fd2a1a19f069157bad3f87205455c3d4",
+    "sha512": "c56f74f33aa3c844a09d1777fe013ff777e2bdf3bc9f1fc75e665da19d5ae2220d660d845f7eb4955e5eb5292104c47f4648d6dcfcb53abeb513c4edc6200ae9",
+    "size": 14663
+  },
+  "b6-forge": {
+    "url": "https://raw.githubusercontent.com/adminluxe/orchidpay/1d7e215a0547532fff5bf1b5f7803d3584a73391/vendor/orchidpay-security/node-forge-1.4.1-orchidpay.1.tgz",
+    "sha256": "1e7fb7aedaee21e02cad9993edc4202885d8be03a4d1acf6f53a47c52cef7ccb",
+    "sha512": "c911dc4ea55a0cb3de389b81d6ebf9b94f5734d92aa4f2850bd0ca8aa713dd798776805efc4736a4f7e42581209ee23859281469d2cd46eae4bc22920a98a527",
+    "size": 435797
+  },
+  "forge1159": {
+    "url": "https://raw.githubusercontent.com/digitalbazaar/forge/db05494352dd3c9a5a07c5270333dcc78866cad2/lib/rsa.js",
+    "sha256": "c7b72e7ef41f4fc0e5228dce3e37851e9ca064c789365d5e392c25d1c5f6e710",
+    "sha512": "33d95f9881495078eceb80813262705ad40cae51aa86e5e109a023c45201654d8a0a2f1c68e36994769129c33583c7aadbc4d0b73efb958a71865aa4c4afa82a",
+    "size": 64490
+  }
+}
