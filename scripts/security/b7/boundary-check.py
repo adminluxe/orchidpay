@@ -22,5 +22,9 @@ if a.git:
  subprocess.run(['git','-C',str(r),'merge-base','--is-ancestor',BASE,head],check=True)
  actual=subprocess.check_output(['git','-C',str(r),'diff','--name-only',BASE,head]).decode().splitlines()
  assert sorted(actual)==sorted(scope['changedPaths']), 'DIFF_SCOPE_DRIFT'
- assert len(subprocess.check_output(['git','-C',str(r),'rev-list',BASE+'..'+head]).splitlines())==1, 'Exactly one reviewed child commit required'
+ commits=subprocess.check_output(['git','-C',str(r),'rev-list',BASE+'..'+head]).decode().splitlines()
+ assert len(commits)==2 and commits[1]=='4ba09daf2c6de8be05e6822984475cda3705b4ae', 'Unexpected QA commit ancestry'
+ assert subprocess.check_output(['git','-C',str(r),'rev-parse',commits[1]+'^']).decode().strip()==BASE, 'Original QA parent drift'
+ hotfix=subprocess.check_output(['git','-C',str(r),'diff','--name-only',commits[1],head]).decode().splitlines()
+ assert sorted(hotfix)==sorted(['.github/workflows/orchidpay-b7-r2-qa.yml','scripts/security/b7/boundary-check.py']), 'Unexpected hotfix files'
 print('B7_QA_BOUNDARIES_PASS; RELEASE_AND_FINANCE_OFF')
