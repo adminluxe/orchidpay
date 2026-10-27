@@ -31,3 +31,23 @@ QA:
 
 Production DB note:
 A read-only schema probe using the currently running service environment was rejected by PostgreSQL authentication. No migration was attempted. The migration bundled here is deliberately unbound and MUST NOT be applied until DB authority/credentials and Alembic lineage are reconciled.
+
+
+## Ledger-plan checkpoint
+
+VPS isolated lab commit:
+`8586291` — non-executable Courier ledger plan
+
+QA:
+**13/13 PASS**
+
+Ledger-plan evidence:
+- tar SHA-256: `dcd8d23eeacfc67fca01bf3672be2566f7e4d76c529fd369d120cc7b1d79ce32`
+- baseline→ledger-plan patch SHA-256: `3a79d238b003156d0a0e151bd0c53fad85b555e0aa001fc14f07856cde686e30`
+
+The plan remains pure and non-executable:
+- no production DB connection;
+- no ledger post;
+- no outbox publish;
+- no payout;
+- no payment rail.

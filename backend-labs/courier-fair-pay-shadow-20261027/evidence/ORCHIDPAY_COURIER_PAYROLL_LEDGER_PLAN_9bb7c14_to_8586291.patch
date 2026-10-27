@@ -1,0 +1,1257 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..7001d75
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,8 @@
++__pycache__/
++*.py[cod]
++.venv/
++.env
++.env.*
++!.env.example
++*.log
++var/
+diff --git a/COURIER_PAYROLL_SHADOW_LAB.md b/COURIER_PAYROLL_SHADOW_LAB.md
+new file mode 100644
+index 0000000..bcc44f7
+--- /dev/null
++++ b/COURIER_PAYROLL_SHADOW_LAB.md
+@@ -0,0 +1,68 @@
++# ORCHIDPAY — Courier Fair Pay Settlement Shadow Lab
++
++Date: 27 October 2026
++
++## Boundary
++
++DelishAfrica® Courier Fair Pay computes **what is owed**.
++
++ORCHIDPAY receives an immutable settlement intent and owns **how a financial
++settlement will eventually be orchestrated**.
++
++The first integration is SHADOW ONLY:
++- internal-authenticated endpoint;
++- append-only private NDJSON store;
++- statement-id idempotency;
++- conflict on same statement ID with changed payload;
++- SHA-256 intent hash;
++- outbox preview only;
++- no ledger posting;
++- no settlement call;
++- no payout call;
++- no payment rail.
++
++## Contract
++
++Schema version:
++`ORCHIDPAY_COURIER_SETTLEMENT_INTENT_V0.1`
++
++Required traceability:
++- statement ID;
++- policy ID/hash;
++- facts hash;
++- courier/week/country/currency;
++- eligible income;
++- governing floor;
++- differential;
++- gross pay;
++- tips;
++- expense reimbursements;
++- total cash due;
++- production eligibility;
++- evidence references;
++- warnings.
++
++## Flags
++
++The HTTP consumer stays disabled unless:
++
++`ORCHIDPAY_COURIER_PAYROLL_SHADOW_ENABLED=true`
++
++Optional store location:
++
++`ORCHIDPAY_COURIER_PAYROLL_SHADOW_DIR=/path/to/private/store`
++
++## Production rule
++
++This lab intentionally contains **no payout execution path**.
++
++Promotion to a production settlement engine requires:
++1. reconciled DB migration authority;
++2. Green country policy;
++3. production-eligible Fair Pay statement;
++4. explicit ledger-account mapping;
++5. balanced ledger transaction specification;
++6. outbox/event contract;
++7. payout rail authorization;
++8. reconciliation and reversal workflow;
++9. legal/payroll approval.
+diff --git a/app/api/courier_payroll_settlement.py b/app/api/courier_payroll_settlement.py
+new file mode 100644
+index 0000000..c97cd40
+--- /dev/null
++++ b/app/api/courier_payroll_settlement.py
+@@ -0,0 +1,88 @@
++from __future__ import annotations
++
++import os
++
++from fastapi import APIRouter, Depends, HTTPException
++
++from app.core.internal_auth import require_internal_key
++from app.schemas.courier_settlement import CourierSettlementIntent
++from app.services.courier_settlement_service import (
++    CourierSettlementConflict,
++    CourierSettlementShadowService,
++    ShadowCourierSettlementIntentStore,
++)
++
++router = APIRouter(
++    prefix="/payroll/courier",
++    tags=["Courier Payroll"],
++    dependencies=[Depends(require_internal_key)],
++)
++
++
++def _enabled() -> bool:
++    return os.getenv("ORCHIDPAY_COURIER_PAYROLL_SHADOW_ENABLED", "").lower() == "true"
++
++
++def _service() -> CourierSettlementShadowService:
++    if not _enabled():
++        raise HTTPException(
++            status_code=403,
++            detail="ORCHIDPAY_COURIER_PAYROLL_SHADOW_DISABLED",
++        )
++    root = os.getenv(
++        "ORCHIDPAY_COURIER_PAYROLL_SHADOW_DIR",
++        "/var/lib/orchidpay/courier-payroll-shadow",
++    )
++    return CourierSettlementShadowService(
++        ShadowCourierSettlementIntentStore(root)
++    )
++
++
++@router.post("/settlement-intents")
++def accept_settlement_intent(intent: CourierSettlementIntent):
++    try:
++        receipt = _service().accept(intent)
++    except CourierSettlementConflict as exc:
++        raise HTTPException(status_code=409, detail=str(exc)) from exc
++    return {
++        "ok": True,
++        "shadow": True,
++        **receipt.model_dump(mode="json"),
++    }
++
++
++@router.get("/settlement-intents/{statement_id}")
++def get_settlement_intent(statement_id: str):
++    stored = _service().get(statement_id)
++    if not stored:
++        raise HTTPException(
++            status_code=404,
++            detail="ORCHIDPAY_COURIER_SETTLEMENT_NOT_FOUND",
++        )
++    return {
++        "ok": True,
++        "shadow": True,
++        "statement_id": stored.statement_id,
++        "intent_hash": stored.intent_hash,
++        "status": stored.status,
++        "intent": stored.intent,
++        "production_execution": False,
++    }
++
++
++@router.get("/settlement-intents/{statement_id}/outbox-preview")
++def settlement_outbox_preview(statement_id: str):
++    try:
++        event = _service().outbox_preview(statement_id)
++    except KeyError as exc:
++        raise HTTPException(
++            status_code=404,
++            detail="ORCHIDPAY_COURIER_SETTLEMENT_NOT_FOUND",
++        ) from exc
++    return {
++        "ok": True,
++        "shadow": True,
++        "event": event,
++        "published": False,
++        "production_execution": False,
++    }
+diff --git a/app/main.py b/app/main.py
+index 6ffbe02..4cf938a 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -38,6 +38,7 @@ from app.api.balances_engine import router as balances_engine_router
+ # ------------------------------------------------
+ 
+ from app.api.payroll_routes import router as payroll_routes_router
++from app.api.courier_payroll_settlement import router as courier_payroll_settlement_router
+ from app.api.order_routes import router as order_routes_router
+ 
+ # ------------------------------------------------
+@@ -76,6 +77,7 @@ app.include_router(reconciliation_engine_router)
+ app.include_router(balances_engine_router)
+ 
+ app.include_router(payroll_routes_router)
++app.include_router(courier_payroll_settlement_router)
+ app.include_router(order_routes_router)
+ 
+ app.include_router(payments_routes_router)
+diff --git a/app/schemas/courier_settlement.py b/app/schemas/courier_settlement.py
+new file mode 100644
+index 0000000..7acc134
+--- /dev/null
++++ b/app/schemas/courier_settlement.py
+@@ -0,0 +1,127 @@
++from __future__ import annotations
++
++import re
++from datetime import datetime
++from typing import Literal
++
++from pydantic import BaseModel, Field, field_validator, model_validator
++
++HEX64 = re.compile(r"^[0-9a-f]{64}$")
++WEEK_KEY = re.compile(r"^\d{4}-W\d{2}$")
++
++
++class CourierSettlementIntent(BaseModel):
++    schema_version: Literal["ORCHIDPAY_COURIER_SETTLEMENT_INTENT_V0.1"] = (
++        "ORCHIDPAY_COURIER_SETTLEMENT_INTENT_V0.1"
++    )
++    mode: Literal["SHADOW"] = "SHADOW"
++    source_system: Literal["DELISHAFRICA_COURIER_FAIR_PAY"] = (
++        "DELISHAFRICA_COURIER_FAIR_PAY"
++    )
++
++    statement_id: str
++    courier_id: str
++    week_key: str
++    country_code: str
++    currency: str
++
++    policy_id: str
++    policy_hash: str
++    facts_hash: str
++    policy_validation_status: Literal["DRAFT", "LEGAL_REVIEW", "GREEN"]
++    production_eligible: bool = False
++
++    eligible_income_minor: int = Field(ge=0)
++    governing_floor_minor: int = Field(ge=0)
++    differential_due_minor: int = Field(ge=0)
++    gross_pay_due_minor: int = Field(ge=0)
++    tips_minor: int = Field(ge=0)
++    expense_reimbursements_minor: int = Field(ge=0)
++    total_cash_due_minor: int = Field(ge=0)
++
++    generated_at: datetime
++    evidence_refs: list[str] = Field(min_length=1)
++    warnings: list[str] = Field(default_factory=list)
++
++    @field_validator("statement_id", "policy_hash", "facts_hash")
++    @classmethod
++    def validate_hash(cls, value: str) -> str:
++        clean = str(value).strip().lower()
++        if not HEX64.fullmatch(clean):
++            raise ValueError("expected 64-char lowercase SHA-256 hex")
++        return clean
++
++    @field_validator("courier_id", "policy_id")
++    @classmethod
++    def validate_required_text(cls, value: str) -> str:
++        clean = str(value).strip()
++        if not clean:
++            raise ValueError("required text")
++        return clean
++
++    @field_validator("week_key")
++    @classmethod
++    def validate_week_key(cls, value: str) -> str:
++        clean = str(value).strip()
++        if not WEEK_KEY.fullmatch(clean):
++            raise ValueError("invalid ISO week key")
++        return clean
++
++    @field_validator("country_code")
++    @classmethod
++    def normalize_country(cls, value: str) -> str:
++        clean = str(value).strip().upper()
++        if not re.fullmatch(r"[A-Z]{2}", clean):
++            raise ValueError("invalid country code")
++        return clean
++
++    @field_validator("currency")
++    @classmethod
++    def normalize_currency(cls, value: str) -> str:
++        clean = str(value).strip().upper()
++        if not re.fullmatch(r"[A-Z]{3}", clean):
++            raise ValueError("invalid currency")
++        return clean
++
++    @field_validator("generated_at")
++    @classmethod
++    def require_timezone(cls, value: datetime) -> datetime:
++        if value.tzinfo is None or value.utcoffset() is None:
++            raise ValueError("generated_at must be timezone-aware")
++        return value
++
++    @field_validator("evidence_refs")
++    @classmethod
++    def normalize_evidence(cls, values: list[str]) -> list[str]:
++        clean = sorted({str(value).strip() for value in values if str(value).strip()})
++        if not clean:
++            raise ValueError("at least one evidence ref is required")
++        return clean
++
++    @field_validator("warnings")
++    @classmethod
++    def normalize_warnings(cls, values: list[str]) -> list[str]:
++        return sorted({str(value).strip() for value in values if str(value).strip()})
++
++    @model_validator(mode="after")
++    def validate_amounts(self):
++        if self.differential_due_minor > self.gross_pay_due_minor:
++            raise ValueError("differential cannot exceed gross pay")
++        if self.governing_floor_minor > self.gross_pay_due_minor:
++            raise ValueError("gross pay cannot be below governing floor")
++        expected_total = (
++            self.gross_pay_due_minor
++            + self.tips_minor
++            + self.expense_reimbursements_minor
++        )
++        if self.total_cash_due_minor != expected_total:
++            raise ValueError("total cash due mismatch")
++        return self
++
++
++class CourierSettlementReceipt(BaseModel):
++    statement_id: str
++    intent_hash: str
++    status: Literal["SHADOW_RECEIVED"] = "SHADOW_RECEIVED"
++    idempotent_replay: bool
++    production_execution: Literal[False] = False
+diff --git a/app/services/courier_payroll_ledger_plan.py b/app/services/courier_payroll_ledger_plan.py
+new file mode 100644
+index 0000000..776e772
+--- /dev/null
++++ b/app/services/courier_payroll_ledger_plan.py
+@@ -0,0 +1,178 @@
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import Any
++
++from app.schemas.courier_settlement import CourierSettlementIntent
++
++
++@dataclass(frozen=True)
++class LedgerPlanEntry:
++    account_id: str
++    direction: str
++    amount_minor: int
++    currency: str
++
++
++@dataclass(frozen=True)
++class LedgerPlanTx:
++    component: str
++    idempotency_key: str
++    external_type: str
++    external_id: str
++    amount_minor: int
++    currency: str
++    entries: tuple[LedgerPlanEntry, LedgerPlanEntry]
++    metadata: dict[str, Any]
++    execution_allowed: bool = False
++
++
++@dataclass(frozen=True)
++class CourierPayrollLedgerPlan:
++    statement_id: str
++    courier_party_id: str
++    courier_payable_account_id: str
++    transactions: tuple[LedgerPlanTx, ...]
++    total_planned_minor: int
++    production_execution: bool = False
++
++
++@dataclass(frozen=True)
++class CourierPayrollSystemAccounts:
++    gross_clearing_account_id: str
++    tip_clearing_account_id: str
++    expense_clearing_account_id: str
++
++
++def _required(value: str, field: str) -> str:
++    clean = str(value or "").strip()
++    if not clean:
++        raise ValueError(f"ORCHIDPAY_COURIER_LEDGER_{field.upper()}_REQUIRED")
++    return clean
++
++
++def _tx(
++    *,
++    intent: CourierSettlementIntent,
++    component: str,
++    amount_minor: int,
++    debit_account_id: str,
++    courier_payable_account_id: str,
++) -> LedgerPlanTx | None:
++    if amount_minor < 0:
++        raise ValueError("ORCHIDPAY_COURIER_LEDGER_NEGATIVE_AMOUNT")
++    if amount_minor == 0:
++        return None
++    debit = _required(debit_account_id, f"{component}_debit_account")
++    credit = _required(courier_payable_account_id, "courier_payable_account")
++    metadata = {
++        "source_system": intent.source_system,
++        "schema_version": intent.schema_version,
++        "statement_id": intent.statement_id,
++        "policy_id": intent.policy_id,
++        "policy_hash": intent.policy_hash,
++        "facts_hash": intent.facts_hash,
++        "courier_id": intent.courier_id,
++        "week_key": intent.week_key,
++        "country_code": intent.country_code,
++        "component": component,
++        "policy_validation_status": intent.policy_validation_status,
++        "production_eligible": intent.production_eligible,
++    }
++    external_type = f"courier_payroll_statement_{component}"
++    return LedgerPlanTx(
++        component=component,
++        idempotency_key=f"courier_payroll:{intent.statement_id}:{component}",
++        external_type=external_type,
++        external_id=intent.statement_id,
++        amount_minor=amount_minor,
++        currency=intent.currency,
++        entries=(
++            LedgerPlanEntry(
++                account_id=debit,
++                direction="DEBIT",
++                amount_minor=amount_minor,
++                currency=intent.currency,
++            ),
++            LedgerPlanEntry(
++                account_id=credit,
++                direction="CREDIT",
++                amount_minor=amount_minor,
++                currency=intent.currency,
++            ),
++        ),
++        metadata=metadata,
++        execution_allowed=False,
++    )
++
++
++def build_courier_payroll_ledger_plan(
++    intent: CourierSettlementIntent,
++    *,
++    courier_party_id: str,
++    courier_payable_account_id: str,
++    system_accounts: CourierPayrollSystemAccounts,
++) -> CourierPayrollLedgerPlan:
++    """Builds an auditable plan only. This function cannot post ledger entries."""
++    party_id = _required(courier_party_id, "courier_party_id")
++    payable = _required(
++        courier_payable_account_id,
++        "courier_payable_account_id",
++    )
++
++    if intent.mode != "SHADOW":
++        raise ValueError("ORCHIDPAY_COURIER_LEDGER_SHADOW_ONLY")
++
++    candidates = [
++        _tx(
++            intent=intent,
++            component="gross",
++            amount_minor=intent.gross_pay_due_minor,
++            debit_account_id=system_accounts.gross_clearing_account_id,
++            courier_payable_account_id=payable,
++        ),
++        _tx(
++            intent=intent,
++            component="tips",
++            amount_minor=intent.tips_minor,
++            debit_account_id=system_accounts.tip_clearing_account_id,
++            courier_payable_account_id=payable,
++        ),
++        _tx(
++            intent=intent,
++            component="expense",
++            amount_minor=intent.expense_reimbursements_minor,
++            debit_account_id=system_accounts.expense_clearing_account_id,
++            courier_payable_account_id=payable,
++        ),
++    ]
++    transactions = tuple(tx for tx in candidates if tx is not None)
++
++    total = sum(tx.amount_minor for tx in transactions)
++    if total != intent.total_cash_due_minor:
++        raise ValueError("ORCHIDPAY_COURIER_LEDGER_TOTAL_MISMATCH")
++
++    for tx in transactions:
++        debit = sum(
++            entry.amount_minor
++            for entry in tx.entries
++            if entry.direction == "DEBIT"
++        )
++        credit = sum(
++            entry.amount_minor
++            for entry in tx.entries
++            if entry.direction == "CREDIT"
++        )
++        if debit != credit or debit != tx.amount_minor:
++            raise ValueError("ORCHIDPAY_COURIER_LEDGER_UNBALANCED_PLAN")
++        if any(entry.currency != intent.currency for entry in tx.entries):
++            raise ValueError("ORCHIDPAY_COURIER_LEDGER_CURRENCY_MISMATCH")
++
++    return CourierPayrollLedgerPlan(
++        statement_id=intent.statement_id,
++        courier_party_id=party_id,
++        courier_payable_account_id=payable,
++        transactions=transactions,
++        total_planned_minor=total,
++        production_execution=False,
++    )
+diff --git a/app/services/courier_settlement_service.py b/app/services/courier_settlement_service.py
+new file mode 100644
+index 0000000..08dd6fc
+--- /dev/null
++++ b/app/services/courier_settlement_service.py
+@@ -0,0 +1,175 @@
++from __future__ import annotations
++
++import hashlib
++import json
++import os
++from dataclasses import dataclass
++from pathlib import Path
++from typing import Any
++
++from app.schemas.courier_settlement import (
++    CourierSettlementIntent,
++    CourierSettlementReceipt,
++)
++
++
++class CourierSettlementConflict(RuntimeError):
++    pass
++
++
++class CourierSettlementIntegrityError(RuntimeError):
++    pass
++
++
++def canonical_intent_json(intent: CourierSettlementIntent) -> str:
++    payload = intent.model_dump(mode="json")
++    # Transport/envelope time may legitimately differ across retries of the same
++    # immutable weekly statement. It must not create a false economic conflict.
++    payload.pop("generated_at", None)
++    return json.dumps(
++        payload,
++        sort_keys=True,
++        separators=(",", ":"),
++        ensure_ascii=False,
++    )
++
++
++def intent_hash(intent: CourierSettlementIntent) -> str:
++    return hashlib.sha256(canonical_intent_json(intent).encode("utf-8")).hexdigest()
++
++
++@dataclass(frozen=True)
++class StoredSettlementIntent:
++    statement_id: str
++    intent_hash: str
++    intent: dict[str, Any]
++    status: str
++
++
++class ShadowCourierSettlementIntentStore:
++    def __init__(self, root_dir: str):
++        self.root_dir = Path(root_dir).expanduser().resolve()
++        self.root_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
++        os.chmod(self.root_dir, 0o700)
++        self.file_path = self.root_dir / "settlement-intents.ndjson"
++        if not self.file_path.exists():
++            fd = os.open(self.file_path, os.O_CREAT | os.O_WRONLY, 0o600)
++            os.close(fd)
++        os.chmod(self.file_path, 0o600)
++        self._records: dict[str, StoredSettlementIntent] = {}
++        self._load()
++
++    def _load(self) -> None:
++        raw = self.file_path.read_text(encoding="utf-8")
++        if not raw.strip():
++            return
++        for index, line in enumerate(raw.splitlines(), start=1):
++            try:
++                parsed = json.loads(line)
++                intent = CourierSettlementIntent.model_validate(parsed["intent"])
++                stored_hash = str(parsed["intent_hash"])
++                statement_id = str(parsed["statement_id"])
++                status = str(parsed["status"])
++            except Exception as exc:
++                raise CourierSettlementIntegrityError(
++                    f"CORRUPT_SETTLEMENT_INTENT_LINE:{index}"
++                ) from exc
++
++            computed = intent_hash(intent)
++            if (
++                statement_id != intent.statement_id
++                or stored_hash != computed
++                or status != "SHADOW_RECEIVED"
++            ):
++                raise CourierSettlementIntegrityError(
++                    f"SETTLEMENT_INTENT_INTEGRITY:{index}"
++                )
++            if statement_id in self._records:
++                raise CourierSettlementIntegrityError(
++                    f"DUPLICATE_SETTLEMENT_INTENT:{statement_id}"
++                )
++            self._records[statement_id] = StoredSettlementIntent(
++                statement_id=statement_id,
++                intent_hash=stored_hash,
++                intent=intent.model_dump(mode="json"),
++                status=status,
++            )
++
++    def append(
++        self,
++        intent: CourierSettlementIntent,
++    ) -> tuple[StoredSettlementIntent, bool]:
++        digest = intent_hash(intent)
++        existing = self._records.get(intent.statement_id)
++        if existing:
++            if existing.intent_hash != digest:
++                raise CourierSettlementConflict(
++                    "ORCHIDPAY_COURIER_SETTLEMENT_STATEMENT_CONFLICT"
++                )
++            return existing, True
++
++        stored = StoredSettlementIntent(
++            statement_id=intent.statement_id,
++            intent_hash=digest,
++            intent=intent.model_dump(mode="json"),
++            status="SHADOW_RECEIVED",
++        )
++        line = json.dumps(
++            {
++                "statement_id": stored.statement_id,
++                "intent_hash": stored.intent_hash,
++                "status": stored.status,
++                "intent": stored.intent,
++            },
++            sort_keys=True,
++            separators=(",", ":"),
++            ensure_ascii=False,
++        )
++        descriptor = os.open(self.file_path, os.O_APPEND | os.O_WRONLY)
++        try:
++            os.write(descriptor, (line + "\n").encode("utf-8"))
++            os.fsync(descriptor)
++        finally:
++            os.close(descriptor)
++        os.chmod(self.file_path, 0o600)
++        self._records[stored.statement_id] = stored
++        return stored, False
++
++    def get(self, statement_id: str) -> StoredSettlementIntent | None:
++        return self._records.get(str(statement_id).strip())
++
++
++class CourierSettlementShadowService:
++    def __init__(self, store: ShadowCourierSettlementIntentStore):
++        self.store = store
++
++    def accept(self, intent: CourierSettlementIntent) -> CourierSettlementReceipt:
++        stored, replay = self.store.append(intent)
++        return CourierSettlementReceipt(
++            statement_id=stored.statement_id,
++            intent_hash=stored.intent_hash,
++            idempotent_replay=replay,
++        )
++
++    def get(self, statement_id: str) -> StoredSettlementIntent | None:
++        return self.store.get(statement_id)
++
++    def outbox_preview(self, statement_id: str) -> dict[str, Any]:
++        stored = self.store.get(statement_id)
++        if not stored:
++            raise KeyError("ORCHIDPAY_COURIER_SETTLEMENT_NOT_FOUND")
++        event_id = hashlib.sha256(
++            f"courier-payroll-shadow:{statement_id}".encode("utf-8")
++        ).hexdigest()
++        return {
++            "id": event_id,
++            "topic": "courier.payroll.settlement.shadow",
++            "event_type": "CourierPayrollSettlementIntentShadowReceived",
++            "event_key": statement_id,
++            "payload": {
++                "statement_id": statement_id,
++                "intent_hash": stored.intent_hash,
++                "status": stored.status,
++                "production_execution": False,
++            },
++        }
+diff --git a/migrations/versions/courier_payroll_settlement_intent_lab_20261027.py b/migrations/versions/courier_payroll_settlement_intent_lab_20261027.py
+new file mode 100644
+index 0000000..8805232
+--- /dev/null
++++ b/migrations/versions/courier_payroll_settlement_intent_lab_20261027.py
+@@ -0,0 +1,65 @@
++"""Courier payroll settlement intent shadow table — LAB DRAFT ONLY.
++
++Revision ID: courier_payroll_shadow_20261027
++Revises: intentionally_unbound_lab_draft
++
++This migration is deliberately NOT wired into production Alembic history.
++It documents the target append-only persistence shape once production DB
++authority and migration lineage have been reconciled.
++"""
++
++from alembic import op
++import sqlalchemy as sa
++
++
++revision = "courier_payroll_shadow_20261027"
++down_revision = None
++branch_labels = ("courier_payroll_lab_draft",)
++depends_on = None
++
++
++def upgrade():
++    op.create_table(
++        "courier_payroll_settlement_intent",
++        sa.Column("statement_id", sa.String(64), primary_key=True),
++        sa.Column("intent_hash", sa.String(64), nullable=False, unique=True),
++        sa.Column("schema_version", sa.String(64), nullable=False),
++        sa.Column("mode", sa.String(16), nullable=False),
++        sa.Column("status", sa.String(32), nullable=False),
++        sa.Column("courier_id", sa.String(128), nullable=False),
++        sa.Column("week_key", sa.String(16), nullable=False),
++        sa.Column("country_code", sa.String(2), nullable=False),
++        sa.Column("currency", sa.String(3), nullable=False),
++        sa.Column("policy_id", sa.String(160), nullable=False),
++        sa.Column("policy_hash", sa.String(64), nullable=False),
++        sa.Column("facts_hash", sa.String(64), nullable=False),
++        sa.Column("total_cash_due_minor", sa.BigInteger(), nullable=False),
++        sa.Column("payload_json", sa.Text(), nullable=False),
++        sa.Column(
++            "created_at",
++            sa.DateTime(timezone=True),
++            nullable=False,
++            server_default=sa.func.now(),
++        ),
++        sa.CheckConstraint(
++            "mode = 'SHADOW'",
++            name="ck_courier_payroll_settlement_shadow_mode",
++        ),
++        sa.CheckConstraint(
++            "status = 'SHADOW_RECEIVED'",
++            name="ck_courier_payroll_settlement_shadow_status",
++        ),
++    )
++    op.create_index(
++        "ix_courier_payroll_settlement_courier_week",
++        "courier_payroll_settlement_intent",
++        ["courier_id", "week_key"],
++    )
++
++
++def downgrade():
++    op.drop_index(
++        "ix_courier_payroll_settlement_courier_week",
++        table_name="courier_payroll_settlement_intent",
++    )
++    op.drop_table("courier_payroll_settlement_intent")
+diff --git a/tests/fixtures/delish_orchidpay_fixture.json b/tests/fixtures/delish_orchidpay_fixture.json
+new file mode 100644
+index 0000000..7e81e19
+--- /dev/null
++++ b/tests/fixtures/delish_orchidpay_fixture.json
+@@ -0,0 +1,107 @@
++{
++  "statement": {
++    "statementId": "7cf5c31a0eb09deb3a0a8a377e6c90139b1d90659b93ec897ee9926d9e0413f0",
++    "statementVersion": "COURIER_WEEKLY_STATEMENT_V0.2",
++    "courierId": "be-orchidpay-fixture-1",
++    "weekKey": "2026-W44",
++    "countryCode": "BE",
++    "currency": "EUR",
++    "policyId": "BE-EMPLOYEE-POG-FAIR-PAY-LAB-v0.1",
++    "policyHash": "16ab15cf516395cef2f191a308b18062334b4d690384e36074a4a242449f39ec",
++    "factsHash": "8af583c3e5736280a249b0fea1a8fed5f5c0be8597fc3f0f9714e359f91abea3",
++    "factIds": [
++      "fixture-expense-1",
++      "fixture-income-1",
++      "fixture-time-1",
++      "fixture-tip-1"
++    ],
++    "effectiveFactIds": [
++      "fixture-expense-1",
++      "fixture-income-1",
++      "fixture-time-1",
++      "fixture-tip-1"
++    ],
++    "supersededFactIds": [],
++    "factCount": 4,
++    "effectiveFactCount": 4,
++    "computation": {
++      "courierId": "be-orchidpay-fixture-1",
++      "weekKey": "2026-W44",
++      "policyId": "BE-EMPLOYEE-POG-FAIR-PAY-LAB-v0.1",
++      "workerStatus": "EMPLOYEE",
++      "paidSeconds": 3600,
++      "mobilizedSeconds": 3600,
++      "activeMissionSeconds": 3600,
++      "activityGuaranteeSeconds": null,
++      "utilizationRatio": 1,
++      "legalFloorCents": 0,
++      "pogFairnessFloorCents": 1900,
++      "activityGuaranteeFloorCents": 0,
++      "governingFloorCents": 1900,
++      "eligibleIncomeCents": 1800,
++      "differentialDueCents": 100,
++      "grossPayDueCents": 1900,
++      "tipsPassThroughCents": 500,
++      "expenseReimbursementsCents": 300,
++      "totalCashDueCents": 2700,
++      "differentialPaymentDelayDays": null,
++      "productionEligible": false,
++      "warnings": [
++        "COUNTRY_POLICY_NOT_LEGALLY_GREEN",
++        "LEGAL_FLOOR_NOT_CONFIGURED"
++      ]
++    },
++    "explanation": {
++      "paidSeconds": 3600,
++      "activeMissionSeconds": 3600,
++      "activityGuaranteeSeconds": null,
++      "waitingSeconds": 0,
++      "repositionSeconds": 0,
++      "otherPaidSeconds": 0,
++      "excludedSeconds": 0,
++      "eligibleIncomeCents": 1800,
++      "governingFloorCents": 1900,
++      "differentialDueCents": 100,
++      "tipsCents": 500,
++      "expenseReimbursementsCents": 300,
++      "totalCashDueCents": 2700
++    },
++    "contestable": true,
++    "warnings": [
++      "COUNTRY_POLICY_NOT_LEGALLY_GREEN",
++      "LEGAL_FLOOR_NOT_CONFIGURED"
++    ]
++  },
++  "intent": {
++    "schema_version": "ORCHIDPAY_COURIER_SETTLEMENT_INTENT_V0.1",
++    "mode": "SHADOW",
++    "source_system": "DELISHAFRICA_COURIER_FAIR_PAY",
++    "statement_id": "7cf5c31a0eb09deb3a0a8a377e6c90139b1d90659b93ec897ee9926d9e0413f0",
++    "courier_id": "be-orchidpay-fixture-1",
++    "week_key": "2026-W44",
++    "country_code": "BE",
++    "currency": "EUR",
++    "policy_id": "BE-EMPLOYEE-POG-FAIR-PAY-LAB-v0.1",
++    "policy_hash": "16ab15cf516395cef2f191a308b18062334b4d690384e36074a4a242449f39ec",
++    "facts_hash": "8af583c3e5736280a249b0fea1a8fed5f5c0be8597fc3f0f9714e359f91abea3",
++    "policy_validation_status": "DRAFT",
++    "production_eligible": false,
++    "eligible_income_minor": 1800,
++    "governing_floor_minor": 1900,
++    "differential_due_minor": 100,
++    "gross_pay_due_minor": 1900,
++    "tips_minor": 500,
++    "expense_reimbursements_minor": 300,
++    "total_cash_due_minor": 2700,
++    "generated_at": "2026-10-27T12:30:00.000Z",
++    "evidence_refs": [
++      "facts:8af583c3e5736280a249b0fea1a8fed5f5c0be8597fc3f0f9714e359f91abea3",
++      "policy:16ab15cf516395cef2f191a308b18062334b4d690384e36074a4a242449f39ec",
++      "statement:7cf5c31a0eb09deb3a0a8a377e6c90139b1d90659b93ec897ee9926d9e0413f0"
++    ],
++    "warnings": [
++      "COUNTRY_POLICY_NOT_LEGALLY_GREEN",
++      "LEGAL_FLOOR_NOT_CONFIGURED"
++    ]
++  }
++}
+diff --git a/tests/test_courier_payroll_ledger_plan.py b/tests/test_courier_payroll_ledger_plan.py
+new file mode 100644
+index 0000000..1c9400b
+--- /dev/null
++++ b/tests/test_courier_payroll_ledger_plan.py
+@@ -0,0 +1,111 @@
++from __future__ import annotations
++
++import json
++import unittest
++from pathlib import Path
++
++from app.schemas.courier_settlement import CourierSettlementIntent
++from app.services.courier_payroll_ledger_plan import (
++    CourierPayrollSystemAccounts,
++    build_courier_payroll_ledger_plan,
++)
++
++
++FIXTURE = Path(__file__).parent / "fixtures" / "delish_orchidpay_fixture.json"
++
++
++def fixture_intent(**changes):
++    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))["intent"]
++    payload.update(changes)
++    return CourierSettlementIntent.model_validate(payload)
++
++
++ACCOUNTS = CourierPayrollSystemAccounts(
++    gross_clearing_account_id="system-gross",
++    tip_clearing_account_id="system-tips",
++    expense_clearing_account_id="system-expense",
++)
++
++
++class CourierPayrollLedgerPlanTests(unittest.TestCase):
++    def test_real_delish_fixture_builds_three_balanced_transactions(self):
++        intent = fixture_intent()
++        plan = build_courier_payroll_ledger_plan(
++            intent,
++            courier_party_id="party-courier-1",
++            courier_payable_account_id="account-courier-payable-1",
++            system_accounts=ACCOUNTS,
++        )
++
++        self.assertFalse(plan.production_execution)
++        self.assertEqual(plan.total_planned_minor, intent.total_cash_due_minor)
++        self.assertEqual(
++            [tx.component for tx in plan.transactions],
++            ["gross", "tips", "expense"],
++        )
++        self.assertEqual(
++            [tx.amount_minor for tx in plan.transactions],
++            [
++                intent.gross_pay_due_minor,
++                intent.tips_minor,
++                intent.expense_reimbursements_minor,
++            ],
++        )
++
++        for tx in plan.transactions:
++            self.assertFalse(tx.execution_allowed)
++            self.assertEqual(tx.entries[0].direction, "DEBIT")
++            self.assertEqual(tx.entries[1].direction, "CREDIT")
++            self.assertEqual(tx.entries[0].amount_minor, tx.entries[1].amount_minor)
++            self.assertEqual(
++                tx.idempotency_key,
++                f"courier_payroll:{intent.statement_id}:{tx.component}",
++            )
++            self.assertEqual(tx.external_id, intent.statement_id)
++            self.assertEqual(tx.metadata["policy_hash"], intent.policy_hash)
++            self.assertEqual(tx.metadata["facts_hash"], intent.facts_hash)
++
++    def test_zero_tip_and_expense_skip_zero_ledger_transactions(self):
++        intent = fixture_intent(
++            tips_minor=0,
++            expense_reimbursements_minor=0,
++            total_cash_due_minor=1900,
++        )
++        plan = build_courier_payroll_ledger_plan(
++            intent,
++            courier_party_id="party-courier-1",
++            courier_payable_account_id="account-courier-payable-1",
++            system_accounts=ACCOUNTS,
++        )
++        self.assertEqual(len(plan.transactions), 1)
++        self.assertEqual(plan.transactions[0].component, "gross")
++        self.assertEqual(plan.total_planned_minor, 1900)
++
++    def test_plan_is_deterministic_for_same_economic_intent(self):
++        intent = fixture_intent()
++        first = build_courier_payroll_ledger_plan(
++            intent,
++            courier_party_id="party-courier-1",
++            courier_payable_account_id="account-courier-payable-1",
++            system_accounts=ACCOUNTS,
++        )
++        second = build_courier_payroll_ledger_plan(
++            intent,
++            courier_party_id="party-courier-1",
++            courier_payable_account_id="account-courier-payable-1",
++            system_accounts=ACCOUNTS,
++        )
++        self.assertEqual(first, second)
++
++    def test_plan_refuses_missing_financial_mapping(self):
++        with self.assertRaises(ValueError):
++            build_courier_payroll_ledger_plan(
++                fixture_intent(),
++                courier_party_id="",
++                courier_payable_account_id="account-courier-payable-1",
++                system_accounts=ACCOUNTS,
++            )
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tests/test_courier_settlement.py b/tests/test_courier_settlement.py
+new file mode 100644
+index 0000000..e205582
+--- /dev/null
++++ b/tests/test_courier_settlement.py
+@@ -0,0 +1,250 @@
++from __future__ import annotations
++
++import json
++import os
++import tempfile
++import unittest
++from datetime import datetime, timezone
++from pathlib import Path
++
++from pydantic import ValidationError
++
++from app.schemas.courier_settlement import CourierSettlementIntent
++from app.services.courier_settlement_service import (
++    CourierSettlementConflict,
++    CourierSettlementIntegrityError,
++    CourierSettlementShadowService,
++    ShadowCourierSettlementIntentStore,
++)
++
++
++def valid_intent(**overrides):
++    payload = {
++        "statement_id": "a" * 64,
++        "courier_id": "courier-be-001",
++        "week_key": "2026-W44",
++        "country_code": "be",
++        "currency": "eur",
++        "policy_id": "BE-EMPLOYEE-POG-FAIR-PAY-LAB-v0.1",
++        "policy_hash": "b" * 64,
++        "facts_hash": "c" * 64,
++        "policy_validation_status": "DRAFT",
++        "production_eligible": False,
++        "eligible_income_minor": 9000,
++        "governing_floor_minor": 9500,
++        "differential_due_minor": 500,
++        "gross_pay_due_minor": 9500,
++        "tips_minor": 1200,
++        "expense_reimbursements_minor": 800,
++        "total_cash_due_minor": 11500,
++        "generated_at": datetime(2026, 10, 27, 12, 0, tzinfo=timezone.utc),
++        "evidence_refs": [
++            "statement:a",
++            "policy:b",
++            "facts:c",
++            "statement:a",
++        ],
++        "warnings": ["COUNTRY_POLICY_NOT_LEGALLY_GREEN"],
++    }
++    payload.update(overrides)
++    return CourierSettlementIntent.model_validate(payload)
++
++
++class CourierSettlementShadowTests(unittest.TestCase):
++    def test_contract_normalizes_and_validates_totals(self):
++        intent = valid_intent()
++        self.assertEqual(intent.country_code, "BE")
++        self.assertEqual(intent.currency, "EUR")
++        self.assertEqual(
++            intent.evidence_refs,
++            ["facts:c", "policy:b", "statement:a"],
++        )
++        self.assertEqual(intent.total_cash_due_minor, 11500)
++
++    def test_total_mismatch_is_rejected(self):
++        with self.assertRaises(ValidationError):
++            valid_intent(total_cash_due_minor=11499)
++
++    def test_append_is_idempotent_but_same_statement_mutation_conflicts(self):
++        with tempfile.TemporaryDirectory() as root:
++            service = CourierSettlementShadowService(
++                ShadowCourierSettlementIntentStore(root)
++            )
++            first = service.accept(valid_intent())
++            replay = service.accept(valid_intent())
++            timestamp_retry = service.accept(
++                valid_intent(
++                    generated_at=datetime(
++                        2026, 10, 27, 12, 5, tzinfo=timezone.utc
++                    )
++                )
++            )
++            self.assertFalse(first.idempotent_replay)
++            self.assertTrue(replay.idempotent_replay)
++            self.assertTrue(timestamp_retry.idempotent_replay)
++            self.assertEqual(first.intent_hash, replay.intent_hash)
++            self.assertEqual(first.intent_hash, timestamp_retry.intent_hash)
++
++            changed = valid_intent(
++                eligible_income_minor=8900,
++                differential_due_minor=600,
++            )
++            with self.assertRaises(CourierSettlementConflict):
++                service.accept(changed)
++
++    def test_store_survives_restart_and_outbox_is_preview_only(self):
++        with tempfile.TemporaryDirectory() as root:
++            first = CourierSettlementShadowService(
++                ShadowCourierSettlementIntentStore(root)
++            )
++            receipt = first.accept(valid_intent())
++
++            second = CourierSettlementShadowService(
++                ShadowCourierSettlementIntentStore(root)
++            )
++            stored = second.get(receipt.statement_id)
++            self.assertIsNotNone(stored)
++            event = second.outbox_preview(receipt.statement_id)
++            self.assertEqual(
++                event["topic"],
++                "courier.payroll.settlement.shadow",
++            )
++            self.assertFalse(event["payload"]["production_execution"])
++            self.assertEqual(
++                event["payload"]["intent_hash"],
++                receipt.intent_hash,
++            )
++
++    def test_store_permissions_are_private(self):
++        with tempfile.TemporaryDirectory() as root:
++            nested = Path(root) / "shadow"
++            ShadowCourierSettlementIntentStore(str(nested))
++            self.assertEqual(os.stat(nested).st_mode & 0o777, 0o700)
++            self.assertEqual(
++                os.stat(nested / "settlement-intents.ndjson").st_mode & 0o777,
++                0o600,
++            )
++
++    def test_tampering_is_detected_on_restart(self):
++        with tempfile.TemporaryDirectory() as root:
++            store = ShadowCourierSettlementIntentStore(root)
++            service = CourierSettlementShadowService(store)
++            service.accept(valid_intent())
++            file_path = Path(root) / "settlement-intents.ndjson"
++            line = json.loads(file_path.read_text(encoding="utf-8").strip())
++            line["intent"]["gross_pay_due_minor"] = 9999
++            file_path.write_text(
++                json.dumps(line, separators=(",", ":")) + "\n",
++                encoding="utf-8",
++            )
++            with self.assertRaises(CourierSettlementIntegrityError):
++                ShadowCourierSettlementIntentStore(root)
++
++
++if __name__ == "__main__":
++    unittest.main()
++
++class CourierSettlementHttpTests(unittest.TestCase):
++    def test_http_consumer_is_internal_shadow_only_and_idempotent(self):
++        from unittest.mock import patch
++        from fastapi import FastAPI
++        from fastapi.testclient import TestClient
++        from app.api.courier_payroll_settlement import router
++
++        with tempfile.TemporaryDirectory() as root:
++            app = FastAPI()
++            app.include_router(router)
++            client = TestClient(app)
++            payload = valid_intent().model_dump(mode="json")
++            env = {
++                "INTERNAL_API_KEY": "test-internal-key",
++                "ORCHIDPAY_COURIER_PAYROLL_SHADOW_ENABLED": "true",
++                "ORCHIDPAY_COURIER_PAYROLL_SHADOW_DIR": root,
++            }
++            with patch.dict(os.environ, env, clear=False):
++                unauthorized = client.post(
++                    "/payroll/courier/settlement-intents",
++                    json=payload,
++                )
++                self.assertEqual(unauthorized.status_code, 401)
++
++                headers = {"X-Internal-Key": "test-internal-key"}
++                first = client.post(
++                    "/payroll/courier/settlement-intents",
++                    headers=headers,
++                    json=payload,
++                )
++                self.assertEqual(first.status_code, 200)
++                self.assertFalse(first.json()["idempotent_replay"])
++                self.assertFalse(first.json()["production_execution"])
++
++                replay = client.post(
++                    "/payroll/courier/settlement-intents",
++                    headers=headers,
++                    json=payload,
++                )
++                self.assertEqual(replay.status_code, 200)
++                self.assertTrue(replay.json()["idempotent_replay"])
++
++                fetched = client.get(
++                    f"/payroll/courier/settlement-intents/{payload['statement_id']}",
++                    headers=headers,
++                )
++                self.assertEqual(fetched.status_code, 200)
++                self.assertFalse(fetched.json()["production_execution"])
++
++                preview = client.get(
++                    f"/payroll/courier/settlement-intents/{payload['statement_id']}/outbox-preview",
++                    headers=headers,
++                )
++                self.assertEqual(preview.status_code, 200)
++                self.assertFalse(preview.json()["published"])
++                self.assertFalse(preview.json()["production_execution"])
++
++    def test_http_consumer_is_disabled_by_default(self):
++        from unittest.mock import patch
++        from fastapi import FastAPI
++        from fastapi.testclient import TestClient
++        from app.api.courier_payroll_settlement import router
++
++        app = FastAPI()
++        app.include_router(router)
++        client = TestClient(app)
++        with patch.dict(
++            os.environ,
++            {
++                "INTERNAL_API_KEY": "test-internal-key",
++                "ORCHIDPAY_COURIER_PAYROLL_SHADOW_ENABLED": "false",
++            },
++            clear=False,
++        ):
++            response = client.post(
++                "/payroll/courier/settlement-intents",
++                headers={"X-Internal-Key": "test-internal-key"},
++                json=valid_intent().model_dump(mode="json"),
++            )
++            self.assertEqual(response.status_code, 403)
++            self.assertEqual(
++                response.json()["detail"],
++                "ORCHIDPAY_COURIER_PAYROLL_SHADOW_DISABLED",
++            )
++
++    def test_real_delish_typescript_fixture_is_accepted(self):
++        fixture_path = Path(__file__).parent / "fixtures" / "delish_orchidpay_fixture.json"
++        payload = json.loads(fixture_path.read_text(encoding="utf-8"))
++        intent = CourierSettlementIntent.model_validate(payload["intent"])
++        statement = payload["statement"]
++
++        self.assertEqual(intent.statement_id, statement["statementId"])
++        self.assertEqual(intent.policy_hash, statement["policyHash"])
++        self.assertEqual(intent.facts_hash, statement["factsHash"])
++        self.assertEqual(intent.total_cash_due_minor, 2700)
++        self.assertFalse(intent.production_eligible)
++
++        with tempfile.TemporaryDirectory() as root:
++            service = CourierSettlementShadowService(
++                ShadowCourierSettlementIntentStore(root)
++            )
++            receipt = service.accept(intent)
++            self.assertEqual(receipt.statement_id, statement["statementId"])
++            self.assertFalse(receipt.production_execution)

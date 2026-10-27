@@ -66,3 +66,37 @@ Promotion to a production settlement engine requires:
 7. payout rail authorization;
 8. reconciliation and reversal workflow;
 9. legal/payroll approval.
+
+
+## Non-executable ledger plan
+
+The lab now also contains:
+`app/services/courier_payroll_ledger_plan.py`
+
+It maps a validated Fair Pay settlement intent to a pure, deterministic ledger plan:
+- gross obligation;
+- tip pass-through;
+- expense reimbursement.
+
+Each non-zero component becomes one balanced two-entry plan:
+- DEBIT dedicated SYSTEM clearing account;
+- CREDIT Courier payable account.
+
+The plan carries:
+- statement ID;
+- policy/facts hashes;
+- component;
+- idempotency key;
+- external reference;
+- currency/amount.
+
+Every generated transaction has:
+`execution_allowed = False`
+
+The aggregate plan has:
+`production_execution = False`
+
+No SQLAlchemy session, ledger post, outbox publish or payout function is called by this planner.
+
+Current Python QA:
+**13/13 PASS**
