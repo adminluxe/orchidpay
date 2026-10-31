@@ -45,8 +45,9 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "qa/op-p0-b7-der-ast-r2-20261019": false
+      "qa/op-p0-b7-der-ast-r2-20261019": false,
+      "qa/op-p0-b7-f4b-convergence-20261031": false
     }
   },
-  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"qa/op-p0-b7-der-ast-r2-20261019\" ]; then exit 0; else exit 1; fi"
+  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in qa/op-p0-b7-der-ast-r2-20261019|qa/op-p0-b7-f4b-convergence-20261031) exit 0 ;; *) exit 1 ;; esac"
 }

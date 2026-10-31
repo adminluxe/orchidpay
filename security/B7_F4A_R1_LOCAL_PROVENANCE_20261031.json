@@ -1,0 +1,45 @@
+{
+  "checkpoint": "ORCHIDPAY_B7_F4A_R1_20261031",
+  "ciForThisNewCommit": "NOT_EXECUTED",
+  "financeLiveApproved": false,
+  "historicalE2Manifest": "PRESERVED_STALE_HISTORICAL_NOT_RELEASE_PROVENANCE",
+  "npmAuditVulnerabilities": {
+    "critical": 0,
+    "high": 0,
+    "low": 1,
+    "moderate": 23
+  },
+  "originalEightSourceFilesSha256": {
+    "package-lock.json": "82ddc1736434bace73d7b68a81324f78d725398588e0d43d16894b94ad576fdb",
+    "package.json": "15320b8b8caeea8e0afe08425185d8c2a7c93a80d86224d62ca2ee96fac1c608",
+    "scripts/security/b7/sdk55-consumers.cjs": "bf3dcf6f06026bdaf0a563955de0e552cf57df01c0ecc2214029a492196e0163",
+    "scripts/security/test-e2-native-admission.py": "1989ae69da264f12643abfc73162fc68ce45a7aaa53454b03fae40cf92559a28",
+    "scripts/security/verify-e2-native-admission.py": "80bba8887a218fd3bca1e9011446aed9ea2bd411e919394992cc7fb2db976ce6",
+    "scripts/security/verify-e2-provenance.py": "f7a469d6cb4aac4595183394ee565e3c45c56c67ba8e86db297821e7233fbf05",
+    "security/E2_PACKAGE_MANIFEST.json": "c2a84b2ea3ef0b2261688d3de612ed1fca5739f831ce56f54b3fe03cb091152b",
+    "vendor/orchidpay-security/braces-3.0.3-orchidpay-e2.1.tgz": "8dd49cf2759cd6a034e9f8fb1d1cd73291479fe07e02f516690302f96e589061"
+  },
+  "publisherProtectionMergedOnMain": false,
+  "publisherWorkflowFileSha256": "57ba19f380eb99ea6f0205c84d94f632b004e1df6d210d5c2c4c5ab7116cca1d",
+  "r5EvidenceZipSha256": "14fabeaf8acd36c1dddf16fe8e29b93e4b5f18a83afbda8530a3a9eb8312ce48",
+  "r6DiagnosticArchiveSha256": "d5c925166c8250e1ffdca3add0d7b44e8635e309bc8334f1c5cd3652a2155c72",
+  "releaseApproved": false,
+  "remotePushPerformed": false,
+  "scope": "LOCAL_UNMERGED_UNSIGNED_SOURCE_CANDIDATE_ONLY",
+  "signedIPAOrAAB": false,
+  "sourceHead": "c31f277f20a3b4e26716131be00cd8f0e6e905a8",
+  "unsignedHermesBundlesSha256Sha512": {
+    "android": {
+      "bytes": 1840930,
+      "relativePath": "_expo/static/js/android/index-3a04f9d8ea0b140cd148eacfefec1f66.hbc",
+      "sha256": "9a91b6cb7d9c67cc19b5db3d9ef7345cb8f264f3a9e3a23528bbdf49d67a4212",
+      "sha512": "b66386d0af2805147114781c686f12043ce6f6211a3ce97dfa8b8e5fdc3206d789b05fe4ed2f583f41bba89f5ca93bc610f7b4e2891fe82fe74a703e02e59929"
+    },
+    "ios": {
+      "bytes": 1829649,
+      "relativePath": "_expo/static/js/ios/index-64fda693604f9624efa6c4af3fc2c458.hbc",
+      "sha256": "0985e52a2345b07e9c2485b99117c025e7b3c5952e3ee73e5efa9d02900761ce",
+      "sha512": "3c7e44a0bf8da40c9b7c4405a225dfcc8e7b7125fe3cef96021dbcd740313df4bc4db0783c0a401b2d22016a025daa0de3e792672e717a41ae2dd334d2b4e3e1"
+    }
+  }
+}

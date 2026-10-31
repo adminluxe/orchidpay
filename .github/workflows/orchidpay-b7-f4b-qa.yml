@@ -1,0 +1,99 @@
+name: OrchidPay B7-F4B - provenance, native audits, unsigned SDK55 Hermes
+on:
+  push:
+    branches: [qa/op-p0-b7-f4b-convergence-20261031]
+  pull_request:
+    branches: [qa/op-p0-b7-der-ast-r2-20261019]
+permissions:
+  contents: read
+concurrency:
+  group: b7-f4b-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native-audits:
+    name: F4B - native npm FULL/PROD fail-closed
+    if: github.repository == 'adminluxe/orchidpay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Exact QA checkout without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pinned standalone Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - name: Verify immutable F4A parent and unchanged B7 controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/security/b7-f4b/verify_f4b.py --repo "$PWD" --phase git
+      - name: Establish read-only, network-separated B7 sandbox
+        shell: bash
+        run: bash scripts/security/b7-f4b/prepare-sandbox.sh
+      - name: Install exact lock without lifecycle scripts
+        shell: bash
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
+      - name: Collect and enforce real HIGH and CRITICAL FULL + PROD audits
+        shell: bash
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo bash scripts/security/b7-f4b/run-audits.sh
+      - name: Verify source unchanged after native audit
+        shell: bash
+        run: git diff --exit-code
+      - name: Retain full unfiltered audit and negative-control evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: B7-F4B-NATIVE-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.B7_WORK }}/evidence/
+          retention-days: 30
+          if-no-files-found: error
+
+  unsigned-sdk55-hermes:
+    name: F4B - TypeScript, SDK55 and unsigned iOS/Android Hermes
+    if: github.repository == 'adminluxe/orchidpay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Exact QA checkout without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pinned standalone Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - name: Verify immutable F4A parent and unchanged B7 controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/security/b7-f4b/verify_f4b.py --repo "$PWD" --phase git
+      - name: Establish read-only, network-separated B7 sandbox
+        shell: bash
+        run: bash scripts/security/b7-f4b/prepare-sandbox.sh
+      - name: Install exact lock without lifecycle scripts
+        shell: bash
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run offline TypeScript, official Forge/Zod, SDK55 and Hermes gates
+        shell: bash
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo bash scripts/security/b7-f4b/run-mobile.sh
+      - name: Verify source unchanged after mobile export
+        shell: bash
+        run: git diff --exit-code
+      - name: Retain Hermes, provenance and financial OFF-fuse evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: B7-F4B-HERMES-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.B7_WORK }}/evidence/
+          retention-days: 30
+          if-no-files-found: error

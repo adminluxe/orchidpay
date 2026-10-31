@@ -2,7 +2,7 @@
 // SDK55 consumers with disposable local keys; no live certificates or endpoints.
 const assert=require('node:assert/strict');const crypto=require('node:crypto');const fs=require('node:fs');const path=require('node:path');const {createRequire}=require('node:module');
 const root=path.resolve(process.argv[2]);const reportPath=path.resolve(process.argv[3]);const req=createRequire(path.join(root,'package.json'));
-const expected={expo:'55.0.31','react-native':'0.83.10',micromatch:'4.0.8',braces:'3.0.3','node-forge':'1.4.0','@expo/code-signing-certificates':'0.0.6'};
+const expected={expo:'55.0.31','react-native':'0.83.10',micromatch:'4.0.8',braces:'3.0.3','node-forge':'1.4.2','@expo/code-signing-certificates':'0.0.6'};
 const paths={},checks=[];
 function check(name,fn){fn();checks.push(name);}
 for(const [name,version] of Object.entries(expected)){const p=req.resolve(name+'/package.json');assert(p.startsWith(root+'/node_modules/'));assert.equal(require(p).version,version);paths[name]=p;}
