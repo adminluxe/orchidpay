@@ -1,0 +1,31 @@
+{
+  "baseSha": "1d7e215a0547532fff5bf1b5f7803d3584a73391",
+  "changedPaths": [
+    ".github/workflows/orchidpay-b7-r2-qa.yml",
+    "docs/ORCHIDPAY_B7_D_R2_REVIEW_20261019.md",
+    "package-lock.json",
+    "package.json",
+    "scripts/security/b7/README.md",
+    "scripts/security/b7/boundary-check.py",
+    "scripts/security/b7/braces-differential.cjs",
+    "scripts/security/b7/prepare-fixtures.py",
+    "scripts/security/b7/provenance-negative.cjs",
+    "scripts/security/b7/release-admission.py",
+    "scripts/security/b7/rsa-differential.cjs",
+    "scripts/security/b7/run-qa.sh",
+    "scripts/security/b7/sandbox.sh",
+    "scripts/security/b7/sdk55-consumers.cjs",
+    "scripts/security/verify-local-security-forks.cjs",
+    "security/B7_PACKAGE_MANIFEST.json",
+    "security/B7_REVIEW_SCOPE.json",
+    "security/B7_TEST_INPUTS.json",
+    "vendor/orchidpay-security/braces-3.0.3-orchidpay-b7.2.tgz",
+    "vendor/orchidpay-security/braces-3.0.4-orchidpay.1.tgz",
+    "vendor/orchidpay-security/node-forge-1.4.0-orchidpay-b7.2.tgz",
+    "vendor/orchidpay-security/node-forge-1.4.1-orchidpay.1.tgz",
+    "vendor/orchidpay-security/node-forge-builder.package-lock.json",
+    "vercel.json"
+  ],
+  "releaseApproved": false,
+  "scope": "QA_ONLY_NOT_PROMOTION"
+}

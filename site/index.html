@@ -1,21 +1,21 @@
-
 <!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="OrchidPay, initiative de Purple Orchid Group : infrastructure de paiement mobile en programme pilote privé, conçue avec une approche fail-closed.">
+  <meta name="description" content="OrchidPay : protection de session sur l’appareil, état de sécurité, journal local et lecture du contenu des QR codes. Aucun paiement ni compte bancaire dans cette version.">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#07050b">
-  <meta property="og:title" content="OrchidPay — Payment infrastructure, built to fail closed">
-  <meta property="og:description" content="OrchidPay, initiative de Purple Orchid Group : infrastructure de paiement mobile en programme pilote privé.">
+  <meta property="og:title" content="OrchidPay — Sécurité locale et lecture QR">
+  <meta property="og:description" content="La version actuelle d’OrchidPay propose des contrôles de sécurité sur l’appareil et la lecture locale de QR codes, sans transfert d’argent.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.orchidpay.online/">
   <meta property="og:image" content="https://www.orchidpay.online/assets/orchidpay-brand.webp?v=ux3">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="canonical" href="https://www.orchidpay.online/">\n  <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
+  <link rel="canonical" href="https://www.orchidpay.online/">
+  <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
-  <title>OrchidPay — Payment infrastructure, built to fail closed</title>
+  <title>OrchidPay — Sécurité locale et lecture QR</title>
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
@@ -29,9 +29,9 @@
         </span>
       </a>
       <nav class="navlinks" aria-label="Navigation principale">
-        <a href="#product">Produit</a>
+        <a href="#product">Fonctions</a>
         <a href="#security">Sécurité</a>
-        <a href="#status">Statut</a>
+        <a href="#status">Périmètre</a>
         <a href="/support/">Support</a>
         <a href="/privacy/">Confidentialité</a>
       </nav>
@@ -42,42 +42,42 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <span class="status-pill">Private pilot · Live payments off</span>
-          <div class="eyebrow" style="margin-top:26px">OrchidPay · Infrastructure de paiement</div>
-          <h1>Move money.<br>Keep control.</h1>
-          <p class="lead">Une expérience mobile pensée pour préparer, vérifier et sécuriser chaque opération avant toute exécution.</p>
-          <p class="sublead">La version actuellement testée est un pilote privé. Elle n’exécute aucun paiement réel, ne conserve aucun fonds client et n’active aucun règlement en production.</p>
+          <span class="status-pill">OrchidPay iOS 1.0 · Session, sécurité et QR</span>
+          <div class="eyebrow" style="margin-top:26px">OrchidPay · Une expérience locale et maîtrisée</div>
+          <h1>Votre appareil.<br>Votre contrôle.</h1>
+          <p class="lead">Protégez l'accès à votre session, consultez les informations de sécurité et lisez le contenu d'un QR code sans action automatique.</p>
+          <p class="sublead">Cette version ne permet ni paiement, ni transfert, ni consultation de solde bancaire, ni gestion de carte. Les fonctions biométriques et de stockage sécurisé dépendent des capacités de l'appareil.</p>
           <div class="actions">
-            <a class="btn primary" href="#product">Découvrir le pilote</a>
-            <a class="btn" href="/support/">Support & review</a>
+            <a class="btn primary" href="#product">Voir les fonctions</a>
+            <a class="btn" href="/support/">Assistance</a>
           </div>
         </div>
         <div class="brand-showcase">
-          <img class="hero-brand" src="/assets/orchidpay-brand.webp?v=ux3" alt="OrchidPay" width="320" height="320" decoding="async" fetchpriority="high">
+          <img class="hero-brand" src="/assets/orchidpay-brand.webp?v=ux3" alt="Logo OrchidPay" width="320" height="320" decoding="async" fetchpriority="high">
         </div>
       </div>
     </section>
 
     <div class="trust-strip">
       <div class="wrap trust-list">
-        <span>Fail-closed by design</span>
-        <span>Strong validation gates</span>
-        <span>No advertising tracking</span>
-        <span>Private pilot</span>
+        <span>Protection sur l'appareil</span>
+        <span>Biométrie si disponible</span>
+        <span>Journal de sécurité local</span>
+        <span>QR sans paiement</span>
       </div>
     </div>
 
     <section class="section" id="product">
       <div class="wrap">
         <div class="section-head">
-          <div class="eyebrow">Produit</div>
-          <h2>Simple en surface. Strict sous le capot.</h2>
-          <p class="section-copy">OrchidPay explore une couche de paiement mobile pour les écosystèmes numériques de Purple Orchid Group. L’interface permet aujourd’hui de tester les parcours essentiels sans ouvrir de capacité financière réelle au public.</p>
+          <div class="eyebrow">Fonctions de la version actuelle</div>
+          <h2>L'essentiel, sans promesse financière.</h2>
+          <p class="section-copy">OrchidPay rassemble des outils de protection de session et de consultation locale. Les onglets de l'application sont Accueil, Vérifier un QR, Activité et Profil.</p>
         </div>
         <div class="cards">
-          <article class="card"><div class="num">01 · SEND</div><h3>Préparer un transfert</h3><p>Saisie du destinataire et du montant, contrôles de format et aperçu avant toute action sensible. <strong>Aucun débit réel dans le pilote.</strong></p></article>
-          <article class="card"><div class="num">02 · RECEIVE</div><h3>Recevoir sans ambiguïté</h3><p>Parcours de réception et identifiants de démonstration conçus pour être vérifiés avant activation de futurs payloads signés.</p></article>
-          <article class="card"><div class="num">03 · CONTROL</div><h3>Piloter la sécurité</h3><p>Session protégée, garde-fous d’intégrité et politique de blocage par défaut lorsque la chaîne de confiance n’est pas complète.</p></article>
+          <article class="card"><div class="num">01 · SECURITY</div><h3>Contrôles de sécurité</h3><p>Consultez l'état de la biométrie, du stockage sécurisé et de la session. Testez la validation biométrique lorsque l'appareil la prend en charge.</p></article>
+          <article class="card"><div class="num">02 · QR</div><h3>Lire un QR code</h3><p>Autorisez la caméra puis scannez un QR code. Le texte détecté est présenté localement, sans ouverture de lien ou opération financière automatique.</p></article>
+          <article class="card"><div class="num">03 · ACTIVITY</div><h3>Journal local</h3><p>Retrouvez les événements de session et de sécurité enregistrés sur l'appareil, ainsi que les informations d'aide et de confidentialité.</p></article>
         </div>
       </div>
     </section>
@@ -85,14 +85,14 @@
     <section class="section" id="security">
       <div class="wrap">
         <div class="section-head">
-          <div class="eyebrow">Sécurité</div>
-          <h2>La confiance n’est pas un écran marketing.</h2>
-          <p class="section-copy">L’architecture du projet impose une séparation stricte entre l’interface de démonstration et toute future exécution financière. Les fonctions sensibles restent fermées tant que les contrôles serveur, l’authentification forte, l’idempotence et les autorisations de production ne sont pas réunis.</p>
+          <div class="eyebrow">Protection et transparence</div>
+          <h2>Savoir ce que l'application fait — et ne fait pas.</h2>
+          <p class="section-copy">Les écrans de sécurité présentent les capacités de l'appareil et les événements locaux. Aucun indicateur ne constitue une certification de sécurité générale du téléphone ou d'un destinataire financier.</p>
         </div>
         <div class="cards">
-          <article class="card"><div class="num">A · AUTH</div><h3>Validation forte</h3><p>Les opérations sensibles sont conçues pour exiger une authentification et une autorisation explicites avant exécution.</p></article>
-          <article class="card"><div class="num">B · INTENT</div><h3>Intent signé</h3><p>La cible d’architecture exige des instructions de paiement validées côté serveur plutôt qu’une confiance implicite dans le terminal.</p></article>
-          <article class="card"><div class="num">C · DEFAULT</div><h3>Fail closed</h3><p>En cas de doute, d’état incomplet ou de contrôle manquant : aucune opération financière réelle ne doit partir.</p></article>
+          <article class="card"><div class="num">A · SESSION</div><h3>Verrouillage de session</h3><p>L'application propose un verrouillage local et demande une validation sur l'appareil selon les mécanismes compatibles.</p></article>
+          <article class="card"><div class="num">B · DEVICE</div><h3>Vérifications disponibles</h3><p>Les fonctions dépendent de la prise en charge de la biométrie et du stockage sécurisé par le système d'exploitation.</p></article>
+          <article class="card"><div class="num">C · QR</div><h3>Lecture, pas validation de paiement</h3><p>Scanner un QR ne certifie pas l'identité de son auteur, la destination d'un paiement ou la fiabilité de son contenu. Aucun transfert n'est initié.</p></article>
         </div>
       </div>
     </section>
@@ -100,11 +100,12 @@
     <section class="section" id="status">
       <div class="wrap">
         <div class="section-head">
-          <div class="eyebrow">Statut public</div>
-          <h2>Pilote privé. Pas encore un service de paiement public.</h2>
-          <p class="section-copy">OrchidPay est actuellement une initiative de Purple Orchid Group en phase de test. Purple Orchid Group est elle-même en cours de constitution au Luxembourg. La version pilote ne doit pas être interprétée comme une offre de services de paiement réglementés, une autorisation de la CSSF ou la disponibilité d’un portefeuille de monnaie électronique.</p>
+          <div class="eyebrow">Périmètre fonctionnel</div>
+          <h2>Pas de portefeuille ou de services bancaires dans cette version.</h2>
+          <p class="section-copy">OrchidPay est une initiative de Purple Orchid Group. Le projet peut explorer à terme des services financiers réglementés, mais ceux-ci sont distincts de la version iOS 1.0 décrite ici et ne sont ni commercialisés ni activables par cette application. Toute évolution éventuelle devra être autorisée, documentée et soumise aux contrôles applicables.</p>
         </div>
-        <div class="callout"><strong>Important :</strong> les soldes, transactions, cartes, QR et parcours visibles dans la version test peuvent contenir des données de démonstration. Aucun dépôt, retrait, règlement ou transfert monétaire réel n’est activé dans cette version.</div>
+        <div class="callout"><strong>Important :</strong> cette version ne fournit aucun compte bancaire, solde, carte de paiement, dépôt, retrait, envoi ou réception de fonds. Le lecteur QR affiche uniquement le contenu lu. Aucun fonds client n'est détenu ni transféré par OrchidPay.</div>
+        <p class="section-copy" lang="en" style="margin-top:22px"><strong>For App Review:</strong> OrchidPay iOS 1.0 provides local session and security information, a security-event log, and a QR-content reader only. No banking, money transfer, virtual cards, payment initiation, or customer-fund custody is available in this build. <a href="/support/">Contact the review support team</a>.</p>
       </div>
     </section>
 
@@ -112,16 +113,16 @@
       <div class="wrap">
         <div class="section-head">
           <div class="eyebrow">Transparence</div>
-          <h2>Les liens utiles, au même endroit.</h2>
-          <p class="section-copy">La documentation publique est volontairement séparée du discours produit pour rester lisible par les utilisateurs, les testeurs et les équipes de review.</p>
+          <h2>Les informations et contacts utiles.</h2>
+          <p class="section-copy">Pour comprendre les fonctionnalités actuelles, poser une question, consulter la confidentialité ou joindre l'équipe, utilisez les liens ci-dessous.</p>
         </div>
         <div class="legal-grid">
-          <a class="legal-link" href="/privacy/"><b>Privacy Policy / Confidentialité</b><span>Données du site et du pilote iOS, droits RGPD, conservation et suppression.</span></a>
-          <a class="legal-link" href="/privacy-choices/"><b>Privacy Choices / Vos choix</b><span>Accès, rectification, opposition, effacement et demandes de confidentialité.</span></a>
-          <a class="legal-link" href="/terms/"><b>Terms / Conditions</b><span>Cadre d’utilisation du site et du programme pilote OrchidPay.</span></a>
-          <a class="legal-link" href="/legal/"><b>Legal Notice / Mentions légales</b><span>Éditeur transitoire, statut du projet, propriété intellectuelle et infrastructure.</span></a>
-          <a class="legal-link" href="/cookies/"><b>Cookies & local storage</b><span>Pas de publicité ni analytics délibérés sur cette landing.</span></a>
-          <a class="legal-link" href="/support/"><b>Support & Security</b><span>Assistance, signalement de sécurité et informations pour la review.</span></a>
+          <a class="legal-link" href="/privacy/"><b>Privacy Policy / Confidentialité</b><span>Données du site et de l'application, droits RGPD et conservation.</span></a>
+          <a class="legal-link" href="/privacy-choices/"><b>Privacy Choices / Vos choix</b><span>Accès, rectification et demandes concernant vos données.</span></a>
+          <a class="legal-link" href="/terms/"><b>Terms / Conditions</b><span>Cadre d'utilisation de l'application et du site.</span></a>
+          <a class="legal-link" href="/legal/"><b>Legal Notice / Mentions légales</b><span>Éditeur actuel, statut du projet et informations légales.</span></a>
+          <a class="legal-link" href="/cookies/"><b>Cookies & local storage</b><span>Informations sur les cookies et technologies locales.</span></a>
+          <a class="legal-link" href="/support/"><b>Support & Security</b><span>Assistance utilisateurs, signalements et contact pour App Review.</span></a>
         </div>
       </div>
     </section>
@@ -129,7 +130,7 @@
 
   <footer class="footer">
     <div class="wrap footer-row">
-      <small><strong style="color:#d8d1df">ORCHIDPAY</strong><br>Initiative de Purple Orchid Group · programme pilote privé · © 2026. Aucun service de paiement public n’est actuellement fourni par cette landing.</small>
+      <small><strong style="color:#d8d1df">ORCHIDPAY</strong><br>Initiative de Purple Orchid Group · © 2026. Cette version ne fournit aucun service de paiement.</small>
       <nav aria-label="Liens légaux">
         <a href="/privacy/">Confidentialité</a>
         <a href="/privacy-choices/">Vos choix</a>

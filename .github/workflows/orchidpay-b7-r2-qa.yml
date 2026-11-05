@@ -1,0 +1,256 @@
+name: OrchidPay B7 R2 - QA proof and explicit release NO-GO
+on:
+  push:
+    branches: [qa/op-p0-b7-der-ast-r2-20261019]
+  pull_request:
+    branches: [qa/op-p0-store-factual-convergence-20261016]
+permissions:
+  contents: read
+concurrency:
+  group: b7-r2-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  qualification:
+    name: QA only - DER AST provenance consumers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    if: github.repository == 'adminluxe/orchidpay'
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Exact immutable checkout without saved credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Initialize isolated workspace using runner environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RUNNER_TEMP"
+          test -n "$GITHUB_JOB"
+          test -d "$RUNNER_TEMP"
+          test -n "$GITHUB_ENV"
+          printf 'B7_WORK=%s\n' "$RUNNER_TEMP/op-b7-$GITHUB_JOB" >> "$GITHUB_ENV"
+      - name: Pinned Node toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - name: Check exact SHA, scope and non-deployment boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = v22.23.3
+          test "$(npm --version)" = 10.9.9
+          python3 scripts/security/b7/boundary-check.py --repo "$PWD" --git
+          command -v bwrap || { sudo apt-get update -qq; sudo apt-get install -y bubblewrap; }
+          mkdir -m 700 "$B7_WORK"
+          mkdir "$B7_WORK/evidence"
+          { node --version; npm --version; python3 --version; bwrap --version; } > "$B7_WORK/evidence/toolchain.txt"
+          # Ubuntu 24.04 AppArmor may deny unprivileged Bubblewrap network namespaces.
+          # Fail closed; NEVER change host-wide user namespace sysctls or use root sandbox execution.
+          if ! bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1' > "$B7_WORK/evidence/bwrap-baseline.log" 2>&1; then
+            grep -Fq 'loopback: Failed RTM_NEWADDR: Operation not permitted' "$B7_WORK/evidence/bwrap-baseline.log" || { cat "$B7_WORK/evidence/bwrap-baseline.log"; exit 88; }
+            . /etc/os-release
+            test "$ID" = ubuntu && test "$VERSION_ID" = 24.04
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            sudo apt-get update -qq
+            sudo apt-get install -y apparmor-profiles apparmor-utils
+            P=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+            test -f "$P" && test ! -L "$P"
+            sha256sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha256"
+            sha512sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha512"
+            if sudo test -e /etc/apparmor.d/bwrap-userns-restrict; then
+              sudo cmp -s "$P" /etc/apparmor.d/bwrap-userns-restrict || { echo B7_UNEXPECTED_EXISTING_APPARMOR_PROFILE; exit 89; }
+            else
+              sudo install -m 0644 "$P" /etc/apparmor.d/bwrap-userns-restrict
+            fi
+            sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            dpkg-query -W apparmor-profiles apparmor-utils > "$B7_WORK/evidence/apparmor-package-versions.txt"
+            echo B7_DISTRO_PROFILE_LOADED_WITH_HOST_POLICY_UNCHANGED
+          fi
+          bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1'
+          echo B7_OFFLINE_SANDBOX_ACTIVE
+      - name: Install exact application lock without lifecycle scripts
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
+      - name: Acquire SHA256 and SHA512 pinned public negative controls
+        run: python3 scripts/security/b7/prepare-fixtures.py --repo "$PWD" --work "$B7_WORK"
+      - name: Offline differential, provenance and consumer qualification
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo bash scripts/security/b7/run-qa.sh
+      - name: No tracked source mutation
+        run: git diff --exit-code
+      - name: Archive evidence including failures, not a release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: B7-${{ github.event_name }}-${{ github.job }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.B7_WORK }}/evidence/
+          if-no-files-found: error
+          retention-days: 30
+  unsigned-mobile:
+    name: QA only - TypeScript and unsigned Hermes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    if: github.repository == 'adminluxe/orchidpay'
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Exact immutable checkout without saved credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Initialize isolated workspace using runner environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RUNNER_TEMP"
+          test -n "$GITHUB_JOB"
+          test -d "$RUNNER_TEMP"
+          test -n "$GITHUB_ENV"
+          printf 'B7_WORK=%s\n' "$RUNNER_TEMP/op-b7-$GITHUB_JOB" >> "$GITHUB_ENV"
+      - name: Pinned Node toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - name: Check exact SHA, scope and non-deployment boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = v22.23.3
+          test "$(npm --version)" = 10.9.9
+          python3 scripts/security/b7/boundary-check.py --repo "$PWD" --git
+          command -v bwrap || { sudo apt-get update -qq; sudo apt-get install -y bubblewrap; }
+          mkdir -m 700 "$B7_WORK"
+          mkdir "$B7_WORK/evidence"
+          { node --version; npm --version; python3 --version; bwrap --version; } > "$B7_WORK/evidence/toolchain.txt"
+          # Ubuntu 24.04 AppArmor may deny unprivileged Bubblewrap network namespaces.
+          # Fail closed; NEVER change host-wide user namespace sysctls or use root sandbox execution.
+          if ! bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1' > "$B7_WORK/evidence/bwrap-baseline.log" 2>&1; then
+            grep -Fq 'loopback: Failed RTM_NEWADDR: Operation not permitted' "$B7_WORK/evidence/bwrap-baseline.log" || { cat "$B7_WORK/evidence/bwrap-baseline.log"; exit 88; }
+            . /etc/os-release
+            test "$ID" = ubuntu && test "$VERSION_ID" = 24.04
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            sudo apt-get update -qq
+            sudo apt-get install -y apparmor-profiles apparmor-utils
+            P=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+            test -f "$P" && test ! -L "$P"
+            sha256sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha256"
+            sha512sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha512"
+            if sudo test -e /etc/apparmor.d/bwrap-userns-restrict; then
+              sudo cmp -s "$P" /etc/apparmor.d/bwrap-userns-restrict || { echo B7_UNEXPECTED_EXISTING_APPARMOR_PROFILE; exit 89; }
+            else
+              sudo install -m 0644 "$P" /etc/apparmor.d/bwrap-userns-restrict
+            fi
+            sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            dpkg-query -W apparmor-profiles apparmor-utils > "$B7_WORK/evidence/apparmor-package-versions.txt"
+            echo B7_DISTRO_PROFILE_LOADED_WITH_HOST_POLICY_UNCHANGED
+          fi
+          bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1'
+          echo B7_OFFLINE_SANDBOX_ACTIVE
+      - name: Install exact application lock without lifecycle scripts
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
+      - name: Offline TypeScript and unsigned mobile QA
+        run: |
+          set -euo pipefail
+          bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/bash -c '
+            set -euo pipefail
+            node scripts/security/verify-local-security-forks.cjs > /work/evidence/provenance.json
+            node node_modules/typescript/bin/tsc --noEmit > /work/evidence/typescript.log 2>&1
+            node --test scripts/op-p0-qa-export-gate.test.cjs > /work/evidence/export-gate-tests.log 2>&1
+            python3 scripts/orchidpay_apple231_copy_gate.py > /work/evidence/factual-copy.log 2>&1
+            python3 scripts/orchidpay_apple231_site_gate.py > /work/evidence/factual-site.log 2>&1
+            timeout -k 10s 600s node --max-old-space-size=2048 node_modules/expo/bin/cli export --platform ios --max-workers 2 --output-dir /work/ios > /work/evidence/ios-export.log 2>&1
+            timeout -k 10s 600s node --max-old-space-size=2048 node_modules/expo/bin/cli export --platform android --max-workers 2 --output-dir /work/android > /work/evidence/android-export.log 2>&1
+            node scripts/op-p0-qa-export-gate.cjs /work/ios /work/android > /work/evidence/financial-boundary.log
+            echo UNSIGNED_HERMES_ONLY_NOT_IPA_AAB > /work/evidence/MOBILE_QA_PASS.txt
+          '
+          git diff --exit-code
+      - name: Archive evidence including failures, not a release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: B7-${{ github.event_name }}-${{ github.job }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.B7_WORK }}/evidence/
+          if-no-files-found: error
+          retention-days: 30
+  release-admission:
+    name: RELEASE NO-GO - native HIGH CRITICAL policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    if: github.repository == 'adminluxe/orchidpay'
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Exact immutable checkout without saved credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Initialize isolated workspace using runner environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RUNNER_TEMP"
+          test -n "$GITHUB_JOB"
+          test -d "$RUNNER_TEMP"
+          test -n "$GITHUB_ENV"
+          printf 'B7_WORK=%s\n' "$RUNNER_TEMP/op-b7-$GITHUB_JOB" >> "$GITHUB_ENV"
+      - name: Pinned Node toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - name: Check exact SHA, scope and non-deployment boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = v22.23.3
+          test "$(npm --version)" = 10.9.9
+          python3 scripts/security/b7/boundary-check.py --repo "$PWD" --git
+          command -v bwrap || { sudo apt-get update -qq; sudo apt-get install -y bubblewrap; }
+          mkdir -m 700 "$B7_WORK"
+          mkdir "$B7_WORK/evidence"
+          { node --version; npm --version; python3 --version; bwrap --version; } > "$B7_WORK/evidence/toolchain.txt"
+          # Ubuntu 24.04 AppArmor may deny unprivileged Bubblewrap network namespaces.
+          # Fail closed; NEVER change host-wide user namespace sysctls or use root sandbox execution.
+          if ! bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1' > "$B7_WORK/evidence/bwrap-baseline.log" 2>&1; then
+            grep -Fq 'loopback: Failed RTM_NEWADDR: Operation not permitted' "$B7_WORK/evidence/bwrap-baseline.log" || { cat "$B7_WORK/evidence/bwrap-baseline.log"; exit 88; }
+            . /etc/os-release
+            test "$ID" = ubuntu && test "$VERSION_ID" = 24.04
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            sudo apt-get update -qq
+            sudo apt-get install -y apparmor-profiles apparmor-utils
+            P=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+            test -f "$P" && test ! -L "$P"
+            sha256sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha256"
+            sha512sum "$P" > "$B7_WORK/evidence/ubuntu-bwrap-profile.sha512"
+            if sudo test -e /etc/apparmor.d/bwrap-userns-restrict; then
+              sudo cmp -s "$P" /etc/apparmor.d/bwrap-userns-restrict || { echo B7_UNEXPECTED_EXISTING_APPARMOR_PROFILE; exit 89; }
+            else
+              sudo install -m 0644 "$P" /etc/apparmor.d/bwrap-userns-restrict
+            fi
+            sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+            test "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)" = 1
+            dpkg-query -W apparmor-profiles apparmor-utils > "$B7_WORK/evidence/apparmor-package-versions.txt"
+            echo B7_DISTRO_PROFILE_LOADED_WITH_HOST_POLICY_UNCHANGED
+          fi
+          bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" offline /repo /bin/sh -c 'test ! -e /home/runner; test "$(wc -l < /proc/net/route)" -eq 1'
+          echo B7_OFFLINE_SANDBOX_ACTIVE
+      - name: Install exact application lock without lifecycle scripts
+        run: bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo npm ci --ignore-scripts --no-audit --no-fund
+      - name: Native audit - no exception to zero HIGH or CRITICAL
+        run: |
+          bash scripts/security/b7/sandbox.sh "$PWD" "$B7_WORK" registry /repo python3 scripts/security/b7/release-admission.py --repo /repo --out /work/evidence
+      - name: Archive evidence including failures, not a release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: B7-${{ github.event_name }}-${{ github.job }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.B7_WORK }}/evidence/
+          if-no-files-found: error
+          retention-days: 30

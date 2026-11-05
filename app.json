@@ -73,7 +73,8 @@
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
-      ]
+      ],
+      "./plugins/withOrchidPayNoBackup.cjs"
     ]
   }
 }
