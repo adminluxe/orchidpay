@@ -1,0 +1,24 @@
+name: HF51 exact source preservation
+on:
+  push:
+    branches: [qa/hf51-pr28-publication-lock-20261105]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  source-preservation:
+    if: github.event_name == 'push' || github.head_ref == 'qa/hf51-pr28-publication-lock-20261105'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - run: node scripts/security/verify-hf51-convergence.cjs
+      - run: git diff --exit-code
